@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RHAT - Settings</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="options">
+    <div class="options-container">
+      <header class="options-header">
+        <div class="header-content">
+          <h1 class="options-title">
+            <span class="title-icon">🎯</span>
+            RHAT
+          </h1>
+          <p class="options-subtitle">
+            RaterHub Automated Tasks - Configure your monitoring preferences
+          </p>
+        </div>
+      </header>
+
+      <main class="options-main">
+        <section class="settings-section">
+          <div class="section-header">
+            <h2 class="section-title">General Settings</h2>
+            <p class="section-description">
+              Control when and how the monitor operates
+            </p>
+          </div>
+
+          <div class="settings-grid">
+            <div class="setting-card">
+              <div class="setting-header">
+                <h3 class="setting-title">Monitor Status</h3>
+                <label class="toggle-switch large">
+                  <input type="checkbox" id="enabledToggle" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <p class="setting-description">
+                Enable or disable the automatic task monitoring
+              </p>
+              <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Disabled</span>
+              </div>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-header">
+                <h3 class="setting-title">Operation Mode</h3>
+                <div class="mode-selector">
+                  <label class="radio-option">
+                    <input
+                      type="radio"
+                      name="mode"
+                      value="alarm_only"
+                      id="alarmOnlyMode"
+                    />
+                    <span class="radio-custom"></span>
+                    <div class="radio-content">
+                      <strong>Alarm only</strong>
+                      <small
+                        >Play sound notification when tasks are available</small
+                      >
+                    </div>
+                  </label>
+                  <label class="radio-option">
+                    <input
+                      type="radio"
+                      name="mode"
+                      value="alarm_and_click"
+                      id="alarmAndClickMode"
+                    />
+                    <span class="radio-custom"></span>
+                    <div class="radio-content">
+                      <strong>Alarm & acquire</strong>
+                      <small
+                        >Play sound and automatically click "Acquire if
+                        available"</small
+                      >
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-header">
+                <h3 class="setting-title">Refresh Interval</h3>
+                <div class="interval-selector">
+                  <div class="interval-options">
+                    <button class="interval-btn active" data-value="1">1s</button>
+                    <button class="interval-btn" data-value="2">2s</button>
+                    <button class="interval-btn" data-value="5">5s</button>
+                    <button class="interval-btn" data-value="10">10s</button>
+                    <button class="interval-btn" data-value="30">30s</button>
+                    <button class="interval-btn" data-value="60">60s</button>
+                  </div>
+                  <p class="interval-display">
+                    Currently refreshing every
+                    <span id="currentInterval">1</span> second(s)
+                  </p>
+                </div>
+              </div>
+              <p class="setting-description">
+                How frequently to check for available tasks when monitoring is
+                active
+              </p>
+            </div>
+          </div>
+
+          <div class="setting-card">
+            <div class="setting-header">
+              <h3 class="setting-title">Alert Sound</h3>
+            </div>
+            <div class="setting-item">
+              <label for="soundSourceSelect">Sound Source:</label>
+              <select id="soundSourceSelect" class="styled-select">
+                <option value="default" selected>Default</option>
+                <option value="file">Local file</option>
+                <option value="url">Online audio link</option>
+              </select>
+            </div>
+            
+            <div id="soundSourceControls">
+              <div id="fileInputContainer" class="setting-item" style="display: none;">
+                <label for="alertSoundFile">Choose MP3 file:</label>
+                <input type="file" id="alertSoundFile" accept="audio/mp3,audio/mpeg" />
+              </div>
+              
+              <div id="urlInputContainer" class="setting-item" style="display: none;">
+                <label for="alertSoundUrl">MP3 URL:</label>
+                <input type="text" id="alertSoundUrl" placeholder="Paste direct MP3 URL here (must end with .mp3)" />
+              </div>
+              
+              <div id="alertSoundDataContainer" class="setting-item" style="display: none;">
+                <label for="alertSoundData">Sound Data:</label>
+                <input type="text" id="alertSoundData" readonly />
+              </div>
+            </div>
+            
+            <div class="setting-item">
+              <button id="saveAlertSoundBtn" class="btn btn-primary">Save Sound</button>
+              <button id="testAlertSoundBtn" class="btn btn-secondary">Test Sound</button>
+            </div>
+            
+            <div id="soundErrorMsg" class="error-message" style="display: none;"></div>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <div class="section-header">
+            <h2 class="section-title">Notification Settings</h2>
+            <p class="section-description">
+              Configure how you want to be notified about tasks
+            </p>
+          </div>
+
+          <div class="settings-grid">
+            <div class="setting-card">
+              <div class="setting-header">
+                <h3 class="setting-title">Desktop Notifications</h3>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="desktopNotificationsToggle" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <p class="setting-description">
+                Show browser notifications when tasks become available or incomplete tasks are detected
+              </p>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-header">
+                <h3 class="setting-title">Mouse Movement Detection</h3>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="mouseMovementToggle" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <p class="setting-description">
+                Automatically stop alarm sounds when mouse movement is detected
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <div class="section-header">
+            <h2 class="section-title">Advanced Features</h2>
+            <p class="section-description">
+              Configure advanced monitoring and error handling features
+            </p>
+          </div>
+
+          <div class="settings-grid">
+            <div class="setting-card">
+              <div class="setting-header">
+                <h3 class="setting-title">Incomplete Tasks Handling</h3>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="incompleteTasksToggle" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <p class="setting-description">
+                Detect and handle incomplete tasks with popup notifications
+              </p>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-header">
+                <h3 class="setting-title">Enhanced Error Detection</h3>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="errorDetectionToggle" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <p class="setting-description">
+                Automatically detect and handle 403 errors and other issues
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="info-section">
+          <div class="info-card">
+            <h3 class="info-title">🚀 How it works</h3>
+            <ol class="info-list">
+              <li>
+                Navigate to
+                <code>https://www.raterhub.com/evaluation/rater</code>
+              </li>
+              <li>Enable the monitor using the toggle above</li>
+              <li>
+                The extension will automatically refresh the page at your chosen
+                interval
+              </li>
+              <li>When tasks become available, you'll hear an alarm sound</li>
+              <li>
+                If "Auto Click" mode is enabled, the extension will
+                automatically acquire tasks
+              </li>
+            </ol>
+          </div>
+
+          <div class="info-card">
+            <h3 class="info-title">⚠️ Important Notes</h3>
+            <ul class="info-list">
+              <li>
+                Keep the RaterHub tab open and visible for best performance
+              </li>
+              <li>Lower refresh intervals may consume more resources</li>
+              <li>
+                The extension only works on the official RaterHub evaluation
+                page
+              </li>
+              <li>Make sure your browser allows sound notifications</li>
+            </ul>
+          </div>
+        </section>
+      </main>
+
+      <footer class="options-footer">
+        <div class="footer-content">
+          <div class="setting-group">
+            <h3>Test Button</h3>
+            <div class="setting-item">
+              <label class="toggle-label">
+                <input type="checkbox" id="showTestButton">
+                <span class="toggle-slider"></span>
+                Show test button on main page
+              </label>
+              <p class="setting-description">Enable to show a test button that simulates finding an acquire button for testing purposes.</p>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <h3>Reset to Defaults</h3>
+            <button id="resetBtn" class="reset-btn">Reset All Settings</button>
+          </div>
+          
+          <div class="save-status">
+            <span id="saveStatus" class="save-message"
+              >Settings saved automatically</span
+            >
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script src="options.js"></script>
+  </body>
+</html>
