@@ -10,15 +10,15 @@ This document tracks the implementation status of all planned upgrades for the R
 - ❌ **Blocked** - Development paused due to dependencies/issues
 - 🔍 **Testing** - In testing/QA phase
 
-## Current Version: 1.0.0
-**Last Updated:** $(date)
+## Current Version: 1.5.0
+**Last Updated:** $(date +%Y-%m-%d)
 
 ---
 
 ## Milestone 1: User Experience Enhancements
 
 ### Visual Notifications System
-- [ ] Desktop notifications alongside audio alerts - ⏳
+- [x] Desktop notifications alongside audio alerts - ✅ 2024
 - [ ] Customizable notification themes - ⏳
 - [ ] Notification history with timestamps - ⏳
 - [ ] Snooze/dismiss functionality - ⏳
@@ -174,25 +174,25 @@ This document tracks the implementation status of all planned upgrades for the R
 
 ## Development Progress
 
-### Q1 2024 (Current)
+### Q1 2024 (Completed)
 - **Focus:** Core stability and bug fixes
-- **Target:** Version 1.1.0 - Enhanced error handling
-- **Status:** Planning phase
+- **Target:** Version 1.5.0 - Enhanced user experience
+- **Status:** ✅ Completed - Desktop notifications, mouse movement detection, incomplete tasks handling
 
-### Q2 2024
-- **Focus:** User experience improvements
-- **Target:** Version 1.2.0 - Visual notifications
-- **Status:** Not started
+### Q2 2024 (Current)
+- **Focus:** Advanced monitoring features
+- **Target:** Version 1.6.0 - Multi-page monitoring
+- **Status:** 🔄 Planning phase
 
 ### Q3 2024
 - **Focus:** Analytics and reporting
-- **Target:** Version 1.3.0 - Basic analytics
-- **Status:** Not started
+- **Target:** Version 1.7.0 - Basic analytics dashboard
+- **Status:** ⏳ Not started
 
 ### Q4 2024
 - **Focus:** Integration capabilities
-- **Target:** Version 1.4.0 - External notifications
-- **Status:** Not started
+- **Target:** Version 1.8.0 - External notifications
+- **Status:** ⏳ Not started
 
 ---
 
@@ -235,17 +235,24 @@ This document tracks the implementation status of all planned upgrades for the R
 
 ## Change Log
 
-### Version 1.0.0 (Current)
+### Version 1.0.0
 - Initial stable release
 - Basic monitoring functionality
 - Audio alert system
 - Context menu controls
 - Options page configuration
 
+### Version 1.5.0 (Current)
+- Desktop notifications system
+- Mouse movement detection to stop alarms
+- Incomplete tasks handling
+- Enhanced error detection
+- Settings UI improvements
+- GitHub repository setup
+
 ### Future Versions
-- Version 1.1.0: Enhanced error handling and stability
-- Version 1.2.0: Visual notifications system
-- Version 1.3.0: Basic analytics dashboard
+- Version 1.6.0: Advanced analytics and reporting
+- Version 1.7.0: External integrations
 - Version 2.0.0: Major feature overhaul
 
 ---
