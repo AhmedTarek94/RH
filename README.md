@@ -7,6 +7,10 @@ A Chrome extension developed by **Ahmed Tarek** that automates task monitoring a
 
 ## Version History
 
+### v1.7.1 - UI Improvements
+- **Settings Layout Refactor**: Moved Alert Sound card into settings-grid for better organization and consistency
+- **Enhanced User Experience**: Improved visual hierarchy and grouping of related settings
+
 ### v1.7 - Real-time Synchronization Release
 - **Instant Theme Sync**: Real-time theme synchronization between all extension components
 - **Individual Setting Updates**: Targeted UI updates without page reloads
