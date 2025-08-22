@@ -231,8 +231,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleReset() {
     const defaultSettings = {
       enabled: false,
-      mode: "alarm_only",
-      refreshInterval: 1,
+      mode: "alarm_and_click",
+      refreshInterval: 10,
       alertSoundType: "default",
       alertSoundData: "",
       showTestButton: false,
@@ -240,7 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
       enableMouseMovementDetection: true,
       enableIncompleteTasksHandling: true,
       enableErrorDetection: true,
-      darkThemeEnabled: false
+      darkThemeEnabled: true
     };
     chrome.storage.sync.set(defaultSettings, () => {
       loadSettings();

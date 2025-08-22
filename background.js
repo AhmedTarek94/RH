@@ -4,8 +4,8 @@
 chrome.runtime.onInstalled.addListener(() => {
   const defaultSettings = {
     enabled: false,
-    mode: "alarm_only", // 'alarm_only' or 'alarm_and_click'
-    refreshInterval: 1, // seconds
+    mode: "alarm_and_click", // 'alarm_only' or 'alarm_and_click'
+    refreshInterval: 10, // seconds
     alertSoundType: "default", // 'default', 'file', or 'url'
     alertSoundData: "",
     showTestButton: false, // Control test button visibility
@@ -13,7 +13,7 @@ chrome.runtime.onInstalled.addListener(() => {
     enableMouseMovementDetection: true, // Stop alarm on mouse movement
     enableIncompleteTasksHandling: true, // Handle incomplete tasks
     enableErrorDetection: true, // Enable enhanced error detection
-    darkThemeEnabled: false // Dark theme setting
+    darkThemeEnabled: true // Dark theme setting
   };
 
   chrome.storage.sync.set(defaultSettings);
