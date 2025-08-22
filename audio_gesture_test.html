@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Context Gesture Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Audio Context Gesture Test</h1>
+    <p>This page tests the user gesture detection for AudioContext initialization.</p>
+
+    <div class="test-section">
+        <h2>Test 1: Check AudioContext State</h2>
+        <button onclick="checkAudioContextState()">Check AudioContext State</button>
+        <div id="audioContextState" class="status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Create and Test AudioContext</h2>
+        <button onclick="createAndTestAudioContext()">Create AudioContext</button>
+        <button onclick="playTestSound()">Play Test Sound</button>
+        <div id="audioTestResult" class="status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Simulate User Gesture</h2>
+        <p>Click anywhere on this page or press any key to simulate user interaction</p>
+        <div id="gestureStatus" class="status info">Waiting for user gesture...</div>
+    </div>
+
+    <script>
+        let audioContext = null;
+        let audioContextCreated = false;
+
+        function checkAudioContextState() {
+            if (window.raterHubAudioContext) {
+                const state = window.raterHubAudioContext.state;
+                document.getElementById('audioContextState').className = 'status info';
+                document.getElementById('audioContextState').innerHTML = 
+                    `AudioContext exists. State: <strong>${state}</strong>`;
+            } else {
+                document.getElementById('audioContextState').className = 'status info';
+                document.getElementById('audioContextState').innerHTML = 
+                    'No AudioContext found (window.raterHubAudioContext is undefined)';
+            }
+        }
+
+        function createAndTestAudioContext() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                window.raterHubAudioContext = audioContext;
+                audioContextCreated = true;
+                
+                document.getElementById('audioTestResult').className = 'status success';
+                document.getElementById('audioTestResult').innerHTML = 
+                    `AudioContext created successfully! State: <strong>${audioContext.state}</strong>`;
+            } catch (error) {
+                document.getElementById('audioTestResult').className = 'status error';
+                document.getElementById('audioTestResult').innerHTML = 
+                    `Error creating AudioContext: ${error.message}`;
+            }
+        }
+
+        function playTestSound() {
+            if (!audioContextCreated) {
+                document.getElementById('audioTestResult').className = 'status error';
+                document.getElementById('audioTestResult').innerHTML = 
+                    'Please create AudioContext first';
+                return;
+            }
+
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                oscillator.type = "sine";
+
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+
+                document.getElementById('audioTestResult').className = 'status success';
+                document.getElementById('audioTestResult').innerHTML = 
+                    'Test sound played successfully!';
+            } catch (error) {
+                document.getElementById('audioTestResult').className = 'status error';
+                document.getElementById('audioTestResult').innerHTML = 
+                    `Error playing sound: ${error.message}`;
+            }
+        }
+
+        // Add user gesture detection similar to the content script
+        document.addEventListener('click', function handleClick() {
+            const statusDiv = document.getElementById('gestureStatus');
+            statusDiv.className = 'status success';
+            statusDiv.innerHTML = 'Click detected! User gesture registered.';
+            
+            // Check if we need to resume AudioContext
+            if (window.raterHubAudioContext && window.raterHubAudioContext.state === 'suspended') {
+                window.raterHubAudioContext.resume().then(() => {
+                    statusDiv.innerHTML += '<br>AudioContext resumed successfully!';
+                }).catch(error => {
+                    statusDiv.className = 'status error';
+                    statusDiv.innerHTML += `<br>Failed to resume AudioContext: ${error.message}`;
+                });
+            }
+        });
+
+        document.addEventListener('keydown', function handleKeypress() {
+            const statusDiv = document.getElementById('gestureStatus');
+            statusDiv.className = 'status success';
+            statusDiv.innerHTML = 'Keypress detected! User gesture registered.';
+            
+            if (window.raterHubAudioContext && window.raterHubAudioContext.state === 'suspended') {
+                window.raterHubAudioContext.resume().then(() => {
+                    statusDiv.innerHTML += '<br>AudioContext resumed successfully!';
+                }).catch(error => {
+                    statusDiv.className = 'status error';
+                    statusDiv.innerHTML += `<br>Failed to resume AudioContext: ${error.message}`;
+                });
+            }
+        });
+    </script>
+</body>
+</html>

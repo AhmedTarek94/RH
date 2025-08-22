@@ -837,4 +837,40 @@ document.addEventListener("DOMContentLoaded", () => {
     filteringToggle.checked = data.filteringEnabled || false;
     updateFilteringStatus(data.filteringEnabled || false);
   });
+
+  // Compact mode functionality
+  const compactModeToggle = document.getElementById('compactModeToggle');
+
+  function setupCompactModeToggle() {
+    compactModeToggle.addEventListener('click', () => {
+      const isCompact = document.body.classList.toggle('compact-mode');
+      compactModeToggle.classList.toggle('compact', isCompact);
+      chrome.storage.sync.set({ compactMode: isCompact });
+      
+      // Update button text based on mode
+      compactModeToggle.innerHTML = isCompact ? '📋' : '📱';
+      compactModeToggle.title = isCompact ? 'Switch to regular view' : 'Switch to compact view';
+    });
+  }
+
+  function loadCompactMode() {
+    chrome.storage.sync.get(['compactMode'], (data) => {
+      const isCompact = data.compactMode || false;
+      if (isCompact) {
+        document.body.classList.add('compact-mode');
+        compactModeToggle.classList.add('compact');
+        compactModeToggle.innerHTML = '📋';
+        compactModeToggle.title = 'Switch to regular view';
+      } else {
+        document.body.classList.remove('compact-mode');
+        compactModeToggle.classList.remove('compact');
+        compactModeToggle.innerHTML = '📱';
+        compactModeToggle.title = 'Switch to compact view';
+      }
+    });
+  }
+
+  // Setup and load compact mode
+  setupCompactModeToggle();
+  loadCompactMode();
 });

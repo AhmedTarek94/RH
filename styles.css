@@ -1017,3 +1017,267 @@ ol.info-list {
     flex-direction: column;
   }
 }
+
+/* Compact Mode Styles */
+.compact-mode {
+  /* Reduced spacing variables */
+  --compact-spacing-sm: 4px;
+  --compact-spacing-md: 8px;
+  --compact-spacing-lg: 12px;
+  --compact-padding-sm: 8px;
+  --compact-padding-md: 12px;
+  --compact-padding-lg: 16px;
+  
+  /* Smaller font sizes */
+  --compact-font-xs: 11px;
+  --compact-font-sm: 12px;
+  --compact-font-md: 14px;
+  --compact-font-lg: 16px;
+  --compact-font-xl: 18px;
+}
+
+/* Options Page Compact Mode */
+.compact-mode.options .options-container {
+  max-width: 100%;
+  padding: 0;
+}
+
+.compact-mode.options .options-header {
+  padding: var(--compact-padding-md);
+}
+
+.compact-mode.options .header-content {
+  padding: var(--compact-padding-lg) var(--compact-padding-md);
+}
+
+.compact-mode.options .options-title {
+  font-size: var(--compact-font-xl);
+  margin-bottom: var(--compact-spacing-sm);
+}
+
+.compact-mode.options .options-subtitle {
+  font-size: var(--compact-font-sm);
+}
+
+.compact-mode.options .tabs-container {
+  margin-bottom: var(--compact-spacing-lg);
+  padding: var(--compact-padding-sm);
+}
+
+.compact-mode.options .tab-btn {
+  padding: var(--compact-padding-sm) var(--compact-padding-md);
+  font-size: var(--compact-font-sm);
+}
+
+.compact-mode.options .options-main {
+  padding: var(--compact-padding-lg) var(--compact-padding-md);
+}
+
+.compact-mode.options .settings-section {
+  margin-bottom: var(--compact-spacing-lg);
+}
+
+.compact-mode.options .section-header {
+  margin-bottom: var(--compact-spacing-lg);
+}
+
+.compact-mode.options .section-title {
+  font-size: var(--compact-font-lg);
+  margin-bottom: var(--compact-spacing-sm);
+}
+
+.compact-mode.options .section-description {
+  font-size: var(--compact-font-sm);
+}
+
+.compact-mode.options .settings-grid {
+  gap: var(--compact-spacing-md);
+}
+
+.compact-mode.options .setting-card {
+  padding: var(--compact-padding-md);
+  margin-bottom: var(--compact-spacing-md);
+}
+
+.compact-mode.options .setting-card:hover {
+  transform: none;
+}
+
+.compact-mode.options .setting-header {
+  margin-bottom: var(--compact-spacing-sm);
+  gap: var(--compact-spacing-md);
+}
+
+.compact-mode.options .setting-title {
+  font-size: var(--compact-font-md);
+  margin-bottom: var(--compact-spacing-sm);
+}
+
+.compact-mode.options .setting-description {
+  font-size: var(--compact-font-sm);
+}
+
+.compact-mode.options .mode-selector {
+  gap: var(--compact-spacing-sm);
+  margin-top: var(--compact-spacing-md);
+}
+
+.compact-mode.options .radio-option {
+  padding: var(--compact-padding-sm);
+  gap: var(--compact-spacing-md);
+}
+
+.compact-mode.options .radio-content strong {
+  font-size: var(--compact-font-sm);
+}
+
+.compact-mode.options .radio-content small {
+  font-size: var(--compact-font-xs);
+}
+
+.compact-mode.options .interval-selector {
+  margin-top: var(--compact-spacing-md);
+}
+
+.compact-mode.options .interval-options {
+  gap: var(--compact-spacing-sm);
+  margin-bottom: var(--compact-spacing-sm);
+}
+
+.compact-mode.options .interval-btn {
+  padding: var(--compact-padding-sm) var(--compact-padding-md);
+  font-size: var(--compact-font-sm);
+}
+
+.compact-mode.options .interval-display {
+  font-size: var(--compact-font-sm);
+}
+
+.compact-mode.options .info-section {
+  gap: var(--compact-spacing-md);
+}
+
+.compact-mode.options .info-card {
+  padding: var(--compact-padding-md);
+}
+
+.compact-mode.options .info-title {
+  font-size: var(--compact-font-md);
+  margin-bottom: var(--compact-spacing-md);
+}
+
+.compact-mode.options .info-list li {
+  font-size: var(--compact-font-sm);
+  padding-left: 20px;
+  margin-bottom: var(--compact-spacing-sm);
+}
+
+.compact-mode.options .options-footer {
+  padding: var(--compact-padding-md);
+}
+
+.compact-mode.options .footer-content {
+  gap: var(--compact-spacing-md);
+}
+
+.compact-mode.options .save-message {
+  font-size: var(--compact-font-sm);
+}
+
+
+/* Compact Mode Toggle Button */
+.compact-toggle-btn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 10000;
+  background: var(--primary-color);
+  color: var(--white);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+  font-size: 16px;
+}
+
+.compact-toggle-btn:hover {
+  background: var(--primary-hover);
+  transform: scale(1.1);
+}
+
+.compact-toggle-btn.compact {
+  background: var(--gray-400);
+}
+
+.compact-toggle-btn.compact:hover {
+  background: var(--gray-500);
+}
+
+/* Filter UI Compact Mode */
+.compact-mode .filter-badge {
+  font-size: var(--compact-font-xs);
+  padding: 2px 6px;
+}
+
+.compact-mode .checkbox-group {
+  gap: var(--compact-spacing-sm);
+}
+
+.compact-mode .checkbox-option {
+  padding: var(--compact-padding-sm);
+  gap: var(--compact-spacing-sm);
+}
+
+.compact-mode .checkbox-label {
+  font-size: var(--compact-font-sm);
+}
+
+.compact-mode .range-inputs {
+  gap: var(--compact-spacing-md);
+}
+
+.compact-mode .input-group label {
+  font-size: var(--compact-font-sm);
+}
+
+.compact-mode .styled-input {
+  padding: var(--compact-padding-sm);
+  font-size: var(--compact-font-sm);
+}
+
+.compact-mode .day-selector {
+  gap: var(--compact-spacing-sm);
+}
+
+.compact-mode .day-selector .checkbox-option {
+  padding: var(--compact-padding-sm);
+}
+
+.compact-mode .day-selector .checkbox-label {
+  font-size: var(--compact-font-xs);
+}
+
+.compact-mode .button-group {
+  gap: var(--compact-spacing-sm);
+}
+
+/* Responsive adjustments for compact mode */
+@media (max-width: 768px) {
+  .compact-mode.options .settings-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .compact-mode.options .info-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .compact-mode .day-selector {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

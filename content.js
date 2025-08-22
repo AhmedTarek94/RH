@@ -47,6 +47,9 @@ if (window.raterHubMonitorLoaded) {
     
     // Add mouse movement detection to stop alarm
     addMouseMovementDetection();
+    
+    // Add user gesture handler to initialize audio context
+    addUserGestureHandler();
   }
 
   function loadSettings() {
@@ -702,7 +705,37 @@ if (window.raterHubMonitorLoaded) {
   function fallbackBeep() {
     try {
       // Create a simple beep using Web Audio API
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      // Check if AudioContext is suspended and needs to be resumed
+      let audioContext;
+      
+      if (window.raterHubAudioContext) {
+        audioContext = window.raterHubAudioContext;
+      } else {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        window.raterHubAudioContext = audioContext;
+      }
+      
+      // If the context is suspended, try to resume it
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log("RaterHub Monitor: AudioContext resumed successfully");
+          playBeepSound(audioContext);
+        }).catch(error => {
+          console.error("RaterHub Monitor: Failed to resume AudioContext:", error);
+          // Fallback to HTML5 audio if Web Audio fails
+          playHtml5Beep();
+        });
+      } else {
+        playBeepSound(audioContext);
+      }
+    } catch (error) {
+      console.error("RaterHub Monitor: Fallback beep failed:", error);
+      playHtml5Beep();
+    }
+  }
+
+  function playBeepSound(audioContext) {
+    try {
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -720,7 +753,23 @@ if (window.raterHubMonitorLoaded) {
 
       console.log("RaterHub Monitor: Fallback beep played");
     } catch (error) {
-      console.error("RaterHub Monitor: Fallback beep failed:", error);
+      console.error("RaterHub Monitor: Error playing beep sound:", error);
+      playHtml5Beep();
+    }
+  }
+
+  function playHtml5Beep() {
+    try {
+      // Create a very simple HTML5 audio fallback
+      const beep = new Audio();
+      beep.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfJ79WQQAoUWrTp6qVTDwpHoOLwtmMcBjiR1/LMeSwFJHfJ79WQQAoUWrTp6qVTDwpHoOLwtmMcBjiR1/LMeSwFJHfJ79WQQAoUWrTp6qVTDw==';
+      beep.volume = 0.3;
+      beep.play().catch(error => {
+        console.error("RaterHub Monitor: HTML5 beep failed:", error);
+      });
+      console.log("RaterHub Monitor: HTML5 fallback beep played");
+    } catch (error) {
+      console.error("RaterHub Monitor: HTML5 beep creation failed:", error);
     }
   }
 
@@ -1000,6 +1049,40 @@ if (window.raterHubMonitorLoaded) {
         // Reset after 100ms of no movement
       }, 100);
     });
+  }
+
+  function addUserGestureHandler() {
+    // Add a global click handler to initialize audio context on user interaction
+    document.addEventListener('click', function initializeAudioOnGesture() {
+      console.log("RaterHub Monitor: User gesture detected, initializing audio context if needed");
+      
+      // Check if we have an audio context that needs initialization
+      if (window.raterHubAudioContext && window.raterHubAudioContext.state === 'suspended') {
+        window.raterHubAudioContext.resume().then(() => {
+          console.log("RaterHub Monitor: AudioContext resumed successfully after user gesture");
+        }).catch(error => {
+          console.error("RaterHub Monitor: Failed to resume AudioContext after user gesture:", error);
+        });
+      }
+      
+      // Remove the event listener after first successful interaction
+      document.removeEventListener('click', initializeAudioOnGesture);
+    }, { once: true, capture: true });
+    
+    // Also listen for keypress events for broader gesture detection
+    document.addEventListener('keydown', function initializeAudioOnKeypress() {
+      console.log("RaterHub Monitor: Keypress detected, initializing audio context if needed");
+      
+      if (window.raterHubAudioContext && window.raterHubAudioContext.state === 'suspended') {
+        window.raterHubAudioContext.resume().then(() => {
+          console.log("RaterHub Monitor: AudioContext resumed successfully after keypress");
+        }).catch(error => {
+          console.error("RaterHub Monitor: Failed to resume AudioContext after keypress:", error);
+        });
+      }
+      
+      document.removeEventListener('keydown', initializeAudioOnKeypress);
+    }, { once: true, capture: true });
   }
 
   function stopAlarm() {
