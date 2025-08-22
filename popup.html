@@ -6,7 +6,7 @@
     <title>RHAT</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body class="popup">
+  <body class="popup" data-theme="light">
     <div class="popup-container">
       <h2 class="popup-title">
         <span class="title-icon">🎯</span>
@@ -14,15 +14,7 @@
       </h2>
 
       <div class="controls-section">
-        <div
-          style="
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 16px 12px;
-            margin-bottom: 18px;
-            background: #fafbfc;
-          "
-        >
+        <div class="settings-card">
           <div class="control-group">
             <label class="toggle-switch">
               <input type="checkbox" id="enabledToggle" />
@@ -37,7 +29,7 @@
               <option value="alarm_and_click">Alarm & acquire</option>
             </select>
           </div>
-          <div style="height: 4px"></div>
+          <div class="spacer-sm"></div>
           <div class="control-group">
             <label for="intervalSelect" class="control-label"
               >Refresh Interval:</label
@@ -53,14 +45,16 @@
             </select>
           </div>
         </div>
-        <div
-          style="
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 16px 12px;
-            background: #fafbfc;
-          "
-        >
+        <div class="settings-card">
+          <!-- Theme toggle -->
+          <div class="control-group">
+            <label class="toggle-switch">
+              <input type="checkbox" id="themeToggle" />
+              <span class="slider"></span>
+            </label>
+            <span class="control-label">Dark Mode</span>
+          </div>
+          
           <!-- New alert sound section -->
           <div class="control-group">
             <label for="soundSourceSelect" class="control-label"
@@ -73,79 +67,38 @@
             </select>
           </div>
           <div id="soundSourceControls">
-            <div
-              id="fileInputContainer"
-              style="
-                display: none;
-                flex-direction: column;
-                align-items: center;
-                width: 100%;
-                margin-top: 8px;
-              "
-            >
-              <label
-                for="alertSoundFile"
-                class="control-label"
-                style="margin-bottom: 8px; text-align: center; width: 100%"
-                >Choose MP3 file:</label
-              >
-              <div style="display: flex; justify-content: center; width: 100%">
+            <div id="fileInputContainer" class="file-input-container">
+              <label for="alertSoundFile" class="file-input-label">Choose MP3 file:</label>
+              <div class="file-input-wrapper">
                 <input
                   type="file"
                   id="alertSoundFile"
                   accept="audio/mp3,audio/mpeg"
-                  style="margin-bottom: 6px"
+                  class="file-input"
                 />
               </div>
             </div>
-            <div
-              id="urlInputContainer"
-              style="
-                display: none;
-                flex-direction: column;
-                align-items: center;
-                width: 100%;
-                margin-top: 5px;
-              "
-            >
-              <label
-                for="alertSoundUrl"
-                class="control-label"
-                style="margin-bottom: 8px; text-align: center; width: 100%"
-                >MP3 URL:</label
-              >
+            <div id="urlInputContainer" class="url-input-container">
+              <label for="alertSoundUrl" class="url-input-label">MP3 URL:</label>
               <input
                 type="text"
                 id="alertSoundUrl"
-                class="styled-select"
+                class="styled-select url-input"
                 placeholder="Paste direct MP3 URL here (must end with .mp3)"
                 pattern=".*\.mp3$"
-                style="width: 100%"
               />
             </div>
           </div>
-          <div style="height: 12px"></div>
-          <button
-            id="playPauseSoundBtn"
-            class="btn btn-secondary"
-            title="Play/Pause"
-            style="margin-right: 12px"
-          >
-            <span id="playPauseIcon" style="font-size: 20px">&#9654;</span>
-          </button>
-          <button id="stopSoundBtn" class="btn btn-outline" title="Stop">
-            <span style="font-size: 20px">&#9632;</span>
-          </button>
-          <span
-            id="soundErrorMsg"
-            style="
-              color: #ef4444;
-              font-size: 13px;
-              display: none;
-              margin-top: 6px;
-              text-align: center;
-            "
-          ></span>
+          <div class="spacer-md"></div>
+          <div class="sound-controls">
+            <button id="playPauseSoundBtn" class="btn btn-secondary" title="Play/Pause">
+              <span id="playPauseIcon" class="sound-icon">&#9654;</span>
+            </button>
+            <button id="stopSoundBtn" class="btn btn-outline" title="Stop">
+              <span class="sound-icon">&#9632;</span>
+            </button>
+          </div>
+          <span id="soundErrorMsg" class="error-message"></span>
         </div>
       </div>
 

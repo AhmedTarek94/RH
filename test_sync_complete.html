@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RHAT - Real-time Sync Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background-color: #0056b3;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RHAT - Real-time Sync Test</h1>
+        
+        <div class="test-section">
+            <h2>Theme Synchronization Test</h2>
+            <button class="test-button" onclick="testThemeSync()">Test Theme Sync</button>
+            <div id="themeStatus" class="status"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Settings Synchronization Test</h2>
+            <button class="test-button" onclick="testSettingsSync()">Test Settings Sync</button>
+            <div id="settingsStatus" class="status"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Real-time Updates Test</h2>
+            <button class="test-button" onclick="testRealTimeUpdates()">Test Real-time Updates</button>
+            <div id="realTimeStatus" class="status"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Cross-component Communication Test</h2>
+            <button class="test-button" onclick="testCrossComponent()">Test Cross-component</button>
+            <div id="crossComponentStatus" class="status"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Log</h2>
+            <div id="testLog" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let testLog = document.getElementById('testLog');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${message}`;
+            logEntry.style.color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#17a2b8';
+            testLog.appendChild(logEntry);
+            testLog.scrollTop = testLog.scrollHeight;
+        }
+
+        function clearStatus(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '';
+            element.className = 'status';
+        }
+
+        function setStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = `status ${type}`;
+        }
+
+        async function testThemeSync() {
+            clearStatus('themeStatus');
+            log('Starting theme synchronization test...');
+            
+            try {
+                // Get current theme
+                const result = await chrome.storage.sync.get(['darkThemeEnabled']);
+                const currentTheme = result.darkThemeEnabled || false;
+                
+                log(`Current theme: ${currentTheme ? 'Dark' : 'Light'}`);
+                
+                // Toggle theme
+                const newTheme = !currentTheme;
+                await chrome.storage.sync.set({ darkThemeEnabled: newTheme });
+                
+                log(`Theme toggled to: ${newTheme ? 'Dark' : 'Light'}`);
+                log('Waiting for real-time sync...');
+                
+                // Wait for sync to propagate
+                setTimeout(async () => {
+                    const updated = await chrome.storage.sync.get(['darkThemeEnabled']);
+                    if (updated.darkThemeEnabled === newTheme) {
+                        setStatus('themeStatus', '✓ Theme synchronization successful!', 'success');
+                        log('Theme sync test passed!', 'success');
+                    } else {
+                        setStatus('themeStatus', '✗ Theme synchronization failed', 'error');
+                        log('Theme sync test failed!', 'error');
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                setStatus('themeStatus', `✗ Error: ${error.message}`, 'error');
+                log(`Theme sync error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSettingsSync() {
+            clearStatus('settingsStatus');
+            log('Starting settings synchronization test...');
+            
+            try {
+                // Test multiple settings
+                const testSettings = {
+                    enabled: Math.random() > 0.5,
+                    mode: Math.random() > 0.5 ? 'alarm_only' : 'alarm_and_click',
+                    refreshInterval: [0.5, 1, 2, 5, 10, 30, 60][Math.floor(Math.random() * 7)],
+                    showTestButton: Math.random() > 0.5
+                };
+                
+                log(`Testing settings: ${JSON.stringify(testSettings)}`);
+                
+                // Set all settings at once
+                await chrome.storage.sync.set(testSettings);
+                log('Settings updated, waiting for sync...');
+                
+                // Wait and verify
+                setTimeout(async () => {
+                    const updated = await chrome.storage.sync.get(Object.keys(testSettings));
+                    let allMatch = true;
+                    
+                    for (const [key, value] of Object.entries(testSettings)) {
+                        if (updated[key] !== value) {
+                            log(`Mismatch: ${key} (expected: ${value}, got: ${updated[key]})`, 'error');
+                            allMatch = false;
+                        }
+                    }
+                    
+                    if (allMatch) {
+                        setStatus('settingsStatus', '✓ All settings synchronized successfully!', 'success');
+                        log('Settings sync test passed!', 'success');
+                    } else {
+                        setStatus('settingsStatus', '✗ Settings synchronization failed', 'error');
+                        log('Settings sync test failed!', 'error');
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                setStatus('settingsStatus', `✗ Error: ${error.message}`, 'error');
+                log(`Settings sync error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testRealTimeUpdates() {
+            clearStatus('realTimeStatus');
+            log('Starting real-time updates test...');
+            
+            try {
+                // Listen for storage changes
+                const changesPromise = new Promise((resolve) => {
+                    chrome.storage.onChanged.addListener(function listener(changes) {
+                        chrome.storage.onChanged.removeListener(listener);
+                        resolve(changes);
+                    });
+                });
+                
+                // Make a change
+                const testValue = Math.random().toString(36).substring(7);
+                await chrome.storage.sync.set({ testTemporarySetting: testValue });
+                
+                // Wait for change notification
+                const changes = await changesPromise;
+                
+                if (changes.testTemporarySetting && changes.testTemporarySetting.newValue === testValue) {
+                    setStatus('realTimeStatus', '✓ Real-time updates working!', 'success');
+                    log('Real-time updates test passed!', 'success');
+                } else {
+                    setStatus('realTimeStatus', '✗ Real-time updates failed', 'error');
+                    log('Real-time updates test failed!', 'error');
+                }
+                
+                // Clean up
+                await chrome.storage.sync.remove('testTemporarySetting');
+                
+            } catch (error) {
+                setStatus('realTimeStatus', `✗ Error: ${error.message}`, 'error');
+                log(`Real-time updates error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCrossComponent() {
+            clearStatus('crossComponentStatus');
+            log('Starting cross-component communication test...');
+            
+            try {
+                // Send a test message
+                const testMessage = {
+                    action: 'settingChanged',
+                    setting: 'testSetting',
+                    value: 'testValue_' + Date.now(),
+                    source: 'test'
+                };
+                
+                log(`Sending test message: ${JSON.stringify(testMessage)}`);
+                
+                // Send message to background
+                const response = await chrome.runtime.sendMessage(testMessage);
+                
+                if (response === true) {
+                    setStatus('crossComponentStatus', '✓ Cross-component communication working!', 'success');
+                    log('Cross-component test passed!', 'success');
+                } else {
+                    setStatus('crossComponentStatus', '✗ Cross-component communication failed', 'error');
+                    log('Cross-component test failed!', 'error');
+                }
+                
+            } catch (error) {
+                setStatus('crossComponentStatus', `✗ Error: ${error.message}`, 'error');
+                log(`Cross-component error: ${error.message}`, 'error');
+            }
+        }
+
+        // Listen for messages from the extension
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            log(`Received message: ${JSON.stringify(message)}`);
+            sendResponse(true);
+            return true;
+        });
+
+        log('Test page loaded. Ready to test real-time synchronization.');
+    </script>
+</body>
+</html>

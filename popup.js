@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const enabledToggle = document.getElementById("enabledToggle");
   const modeSelect = document.getElementById("modeSelect");
   const intervalSelect = document.getElementById("intervalSelect");
+  const themeToggle = document.getElementById("themeToggle");
   const openOptionsBtn = document.getElementById("openOptionsBtn");
   const soundSourceSelect = document.getElementById("soundSourceSelect");
   const fileInputContainer = document.getElementById("fileInputContainer");
@@ -24,6 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
   enabledToggle.addEventListener("change", handleEnabledChange);
   modeSelect.addEventListener("change", handleModeChange);
   intervalSelect.addEventListener("change", handleIntervalChange);
+  themeToggle.addEventListener("change", handleThemeChange);
   openOptionsBtn.addEventListener("click", openOptionsPage);
   soundSourceSelect.addEventListener("change", handleSoundSourceChange);
   alertSoundFile.addEventListener("change", handleFileChange);
@@ -34,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Listen for storage changes (when options page updates settings)
   chrome.storage.onChanged.addListener(handleStorageChange);
 
-  // Listen for messages from options page
+  // Listen for messages from options page and background
   chrome.runtime.onMessage.addListener(handleRuntimeMessage);
 
   function loadSettings() {
@@ -45,6 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "refreshInterval",
         "alertSoundType",
         "alertSoundData",
+        "darkThemeEnabled",
       ],
       (data) => {
         let interval = data.refreshInterval;
@@ -65,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
           refreshInterval: interval,
           alertSoundType: soundSource,
           alertSoundData: data.alertSoundData || "",
+          darkTheme: data.darkThemeEnabled || false,
         };
         updateUI(settings);
       }
@@ -75,6 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
     enabledToggle.checked = settings.enabled;
     modeSelect.value = settings.mode;
     intervalSelect.value = String(settings.refreshInterval);
+    themeToggle.checked = settings.darkTheme;
     soundSourceSelect.value = settings.alertSoundType;
     if (settings.alertSoundType === "default") {
       fileInputContainer.style.display = "none";
@@ -89,6 +94,8 @@ document.addEventListener("DOMContentLoaded", () => {
       urlInputContainer.style.display = "flex";
       alertSoundUrl.value = settings.alertSoundData;
     }
+    // Apply theme when loading settings
+    applyTheme(settings.darkTheme);
     updateStatus(settings.enabled);
   }
 
@@ -125,6 +132,24 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       notifyContentScript();
     });
+  }
+
+  function handleThemeChange() {
+    const darkThemeEnabled = themeToggle.checked;
+    chrome.storage.sync.set({ darkThemeEnabled }, () => {
+      // Apply theme immediately to the popup
+      applyTheme(darkThemeEnabled);
+      // Notify other parts of the extension about theme change
+      chrome.runtime.sendMessage({ action: "themeChanged", darkThemeEnabled });
+    });
+  }
+
+  function applyTheme(darkTheme) {
+    if (darkTheme) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
   }
 
   function notifyContentScript() {
@@ -309,11 +334,52 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Handle messages from options page
+  // Handle messages from options page and background
   function handleRuntimeMessage(message, sender, sendResponse) {
+    console.log("Popup received message:", message.action, message);
+    
     if (message.action === 'settingsUpdated') {
       // Reload settings to update UI
       loadSettings();
+    } else if (message.action === 'themeChanged') {
+      // Update theme based on message from options page
+      applyTheme(message.darkThemeEnabled);
+      themeToggle.checked = message.darkThemeEnabled;
+      
+      // If this theme change came from another source, update storage to stay in sync
+      if (sender.id !== chrome.runtime.id) {
+        chrome.storage.sync.set({ darkThemeEnabled: message.darkThemeEnabled });
+      }
+    } else if (message.action === 'settingChanged') {
+      // Handle individual setting changes for real-time synchronization
+      console.log(`Setting changed: ${message.setting} = ${message.value}`);
+      
+      // Update the specific setting in the UI
+      switch (message.setting) {
+        case 'enabled':
+          enabledToggle.checked = message.value;
+          updateStatus(message.value);
+          break;
+        case 'mode':
+          modeSelect.value = message.value;
+          break;
+        case 'refreshInterval':
+          intervalSelect.value = String(message.value);
+          break;
+        case 'darkThemeEnabled':
+          themeToggle.checked = message.value;
+          applyTheme(message.value);
+          break;
+        case 'alertSoundType':
+          soundSourceSelect.value = message.value;
+          handleSoundSourceChange(); // This will update the UI visibility
+          break;
+        case 'alertSoundData':
+          if (soundSourceSelect.value === "url") {
+            alertSoundUrl.value = message.value;
+          }
+          break;
+      }
     }
     return true; // Keep message channel open for async response
   }

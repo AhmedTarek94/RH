@@ -12,7 +12,8 @@ chrome.runtime.onInstalled.addListener(() => {
     enableDesktopNotifications: true, // Enable desktop notifications
     enableMouseMovementDetection: true, // Stop alarm on mouse movement
     enableIncompleteTasksHandling: true, // Handle incomplete tasks
-    enableErrorDetection: true // Enable enhanced error detection
+    enableErrorDetection: true, // Enable enhanced error detection
+    darkThemeEnabled: false // Dark theme setting
   };
 
   chrome.storage.sync.set(defaultSettings);
@@ -245,6 +246,127 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === "sync") {
     console.log("Background: Storage changed:", changes);
     updateContextMenus();
+  }
+});
+
+// Listen for messages from options page and popup
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("Background received message:", message.action, message);
+  
+  if (message.action === "themeChanged") {
+    // Forward theme change message to all parts of the extension
+    const themeMessage = {
+      action: "themeChanged",
+      darkThemeEnabled: message.darkThemeEnabled,
+      source: sender.id // Track where the change came from
+    };
+    
+    // Send to all extension pages (options, popup, etc.)
+    chrome.runtime.sendMessage(themeMessage).catch((error) => {
+      console.log("No other extension pages open to receive theme change");
+    });
+    
+    // Also notify content scripts if needed
+    chrome.tabs.query(
+      { url: "https://www.raterhub.com/evaluation/rater" },
+      (tabs) => {
+        tabs.forEach((tab) => {
+          chrome.tabs.sendMessage(tab.id, themeMessage).catch((error) => {
+            console.log(`Content script not ready in tab ${tab.id}:`, error);
+          });
+        });
+      }
+    );
+    
+    return true;
+  }
+  
+  // Handle settings updates to ensure all parts are synchronized
+  if (message.action === "settingsUpdated") {
+    // Forward to all content scripts
+    chrome.tabs.query(
+      { url: "https://www.raterhub.com/evaluation/rater" },
+      (tabs) => {
+        tabs.forEach((tab) => {
+          chrome.tabs.sendMessage(tab.id, message).catch((error) => {
+            console.log(`Content script not ready in tab ${tab.id}:`, error);
+          });
+        });
+      }
+    );
+    
+    // Forward to other extension pages
+    chrome.runtime.sendMessage(message).catch((error) => {
+      console.log("No other extension pages open to receive settings update");
+    });
+    
+    return true;
+  }
+  
+  // Handle specific setting changes for real-time synchronization
+  if (message.action === "settingChanged") {
+    // Forward the specific setting change to all parts of the extension
+    const settingMessage = {
+      action: "settingChanged",
+      setting: message.setting,
+      value: message.value,
+      source: sender.id
+    };
+    
+    // Send to all extension pages (options, popup, etc.)
+    chrome.runtime.sendMessage(settingMessage).catch((error) => {
+      console.log("No other extension pages open to receive setting change");
+    });
+    
+    // Also notify content scripts if needed
+    chrome.tabs.query(
+      { url: "https://www.raterhub.com/evaluation/rater" },
+      (tabs) => {
+        tabs.forEach((tab) => {
+          chrome.tabs.sendMessage(tab.id, settingMessage).catch((error) => {
+            console.log(`Content script not ready in tab ${tab.id}:`, error);
+          });
+        });
+      }
+    );
+    
+    return true;
+  }
+  
+  return false;
+});
+
+// Listen for storage changes to broadcast to all extension components
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === "sync") {
+    console.log("Background: Storage changed, broadcasting to all components:", changes);
+    
+    // Broadcast each changed setting to all extension components
+    Object.entries(changes).forEach(([key, change]) => {
+      const settingMessage = {
+        action: "settingChanged",
+        setting: key,
+        value: change.newValue,
+        source: "storage"
+      };
+      
+      // Send to all extension pages (options, popup, etc.)
+      chrome.runtime.sendMessage(settingMessage).catch((error) => {
+        console.log("No other extension pages open to receive setting change");
+      });
+      
+      // Also notify content scripts if needed
+      chrome.tabs.query(
+        { url: "https://www.raterhub.com/evaluation/rater" },
+        (tabs) => {
+          tabs.forEach((tab) => {
+            chrome.tabs.sendMessage(tab.id, settingMessage).catch((error) => {
+              console.log(`Content script not ready in tab ${tab.id}:`, error);
+            });
+          });
+        }
+      );
+    });
   }
 });
 

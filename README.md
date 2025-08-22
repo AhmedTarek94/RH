@@ -11,6 +11,7 @@ A Chrome extension that automates task monitoring and acquisition on RaterHub pl
 - **Error Handling**: Automatically detects and handles 403 errors
 - **Incomplete Task Detection**: Identifies and handles incomplete tasks
 - **Mouse Movement Detection**: Stops alarms when user activity is detected
+- **Theme Support**: Light/Dark theme with real-time synchronization
 
 ## New Features in v1.5
 
@@ -18,6 +19,7 @@ A Chrome extension that automates task monitoring and acquisition on RaterHub pl
 - **Mouse Movement Detection**: Automatically stops alarm sounds when mouse movement is detected
 - **Incomplete Tasks Handling**: Detects and handles incomplete tasks with popup notifications
 - **Enhanced Error Detection**: Improved 403 error detection and handling
+- **Theme System**: Light/Dark theme support with cross-page synchronization
 
 ## Installation
 
@@ -48,17 +50,42 @@ Access the settings page by right-clicking the extension icon and selecting "Opt
 - **Mouse Movement Detection**: Stop alarm on mouse movement
 - **Incomplete Tasks Handling**: Handle incomplete tasks
 - **Enhanced Error Detection**: Improved error detection
+- **Theme**: Light/Dark theme selection
+
+## Theme System
+
+The extension now features a comprehensive theme system:
+
+- **Real-time Synchronization**: Theme changes sync instantly between all extension pages
+- **No Page Reloads**: Theme updates without requiring page refreshes
+- **Persistent Settings**: Theme preferences are saved across browser sessions
+- **Cross-Page Consistency**: Options page, popup, and content pages maintain theme consistency
 
 ## Development
 
 The extension consists of several key components:
 
 - `manifest.json`: Extension configuration
-- `background.js`: Background script for core functionality
+- `background.js`: Background script for core functionality and message routing
 - `content.js`: Content script injected into RaterHub pages
-- `popup.js`: Popup interface logic
-- `options.js`: Settings page logic
-- `styles.css`: Styling for popup and options pages
+- `popup.js`: Popup interface logic with theme support
+- `options.js`: Settings page logic with theme synchronization
+- `styles.css`: Comprehensive styling with theme variables
+- `test_theme_sync.html`: Theme synchronization testing page
+
+### Theme Implementation Details:
+- Uses CSS custom properties for theme variables
+- Implements Chrome runtime messaging for real-time synchronization
+- Includes graceful error handling for closed pages
+- Features storage-based fallback synchronization
+
+## Testing
+
+Use `test_theme_sync.html` to verify theme synchronization functionality:
+- Real-time theme updates between extension components
+- Storage persistence testing
+- Error handling verification
+- Cross-page synchronization validation
 
 ## License
 

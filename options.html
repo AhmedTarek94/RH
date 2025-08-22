@@ -115,38 +115,38 @@
             <div class="setting-header">
               <h3 class="setting-title">Alert Sound</h3>
             </div>
-            <div class="setting-item">
-              <label for="soundSourceSelect">Sound Source:</label>
-              <select id="soundSourceSelect" class="styled-select">
-                <option value="default" selected>Default</option>
-                <option value="file">Local file</option>
-                <option value="url">Online audio link</option>
-              </select>
-            </div>
-            
-            <div id="soundSourceControls">
-              <div id="fileInputContainer" class="setting-item" style="display: none;">
-                <label for="alertSoundFile">Choose MP3 file:</label>
-                <input type="file" id="alertSoundFile" accept="audio/mp3,audio/mpeg" />
+            <div class="setting-content">
+              <div class="setting-item">
+                <label for="soundSourceSelect">Sound Source:</label>
+                <select id="soundSourceSelect" class="styled-select">
+                  <option value="default" selected>Default</option>
+                  <option value="file">Local file</option>
+                  <option value="url">Online audio link</option>
+                </select>
               </div>
               
-              <div id="urlInputContainer" class="setting-item" style="display: none;">
-                <label for="alertSoundUrl">MP3 URL:</label>
-                <input type="text" id="alertSoundUrl" placeholder="Paste direct MP3 URL here (must end with .mp3)" />
+              <div id="soundSourceControls">
+                <div id="fileInputContainer" class="setting-item" style="display: none;">
+                  <label for="alertSoundFile">Choose MP3 file:</label>
+                  <input type="file" id="alertSoundFile" accept="audio/mp3,audio/mpeg" class="styled-input" />
+                </div>
+                
+                <div id="urlInputContainer" class="setting-item" style="display: none;">
+                  <label for="alertSoundUrl">MP3 URL:</label>
+                  <input type="text" id="alertSoundUrl" placeholder="Paste direct MP3 URL here (must end with .mp3)" class="styled-input" />
+                </div>
               </div>
               
-              <div id="alertSoundDataContainer" class="setting-item" style="display: none;">
-                <label for="alertSoundData">Sound Data:</label>
-                <input type="text" id="alertSoundData" readonly />
+              <div class="setting-item button-group">
+                <button id="saveAlertSoundBtn" class="btn btn-primary">Save Sound</button>
+                <button id="testAlertSoundBtn" class="btn btn-secondary">Test Sound</button>
               </div>
+              
+              <div id="soundErrorMsg" class="error-message" style="display: none;"></div>
             </div>
-            
-            <div class="setting-item">
-              <button id="saveAlertSoundBtn" class="btn btn-primary">Save Sound</button>
-              <button id="testAlertSoundBtn" class="btn btn-secondary">Test Sound</button>
-            </div>
-            
-            <div id="soundErrorMsg" class="error-message" style="display: none;"></div>
+            <p class="setting-description">
+              Configure custom alert sounds or use the default notification sound
+            </p>
           </div>
         </section>
 
@@ -220,6 +220,23 @@
               <p class="setting-description">
                 Automatically detect and handle 403 errors and other issues
               </p>
+            </div>
+
+            <div class="setting-card">
+              <div class="setting-header">
+                <h3 class="setting-title">Theme Preference</h3>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="themeToggle" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <p class="setting-description">
+                Switch between light and dark mode themes
+              </p>
+              <div class="status-indicator">
+                <div class="status-dot" id="themeStatusDot"></div>
+                <span id="themeStatusText">Light Mode</span>
+              </div>
             </div>
           </div>
         </section>

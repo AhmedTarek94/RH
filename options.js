@@ -21,6 +21,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const mouseMovementToggle = document.getElementById("mouseMovementToggle");
   const incompleteTasksToggle = document.getElementById("incompleteTasksToggle");
   const errorDetectionToggle = document.getElementById("errorDetectionToggle");
+  const themeToggle = document.getElementById("themeToggle");
+  const themeStatusDot = document.getElementById("themeStatusDot");
+  const themeStatusText = document.getElementById("themeStatusText");
 
   // Load current settings
   loadSettings();
@@ -50,6 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
   mouseMovementToggle.addEventListener("change", handleMouseMovementChange);
   incompleteTasksToggle.addEventListener("change", handleIncompleteTasksChange);
   errorDetectionToggle.addEventListener("change", handleErrorDetectionChange);
+  themeToggle.addEventListener("change", handleThemeChange);
 
   function loadSettings() {
     chrome.storage.sync.get([
@@ -62,7 +66,8 @@ document.addEventListener("DOMContentLoaded", () => {
       "enableDesktopNotifications",
       "enableMouseMovementDetection",
       "enableIncompleteTasksHandling",
-      "enableErrorDetection"
+      "enableErrorDetection",
+      "darkThemeEnabled"
     ], (data) => {
       // Update UI elements
       document.getElementById("enabledToggle").checked = data.enabled || false;
@@ -88,6 +93,10 @@ document.addEventListener("DOMContentLoaded", () => {
       incompleteTasksToggle.checked = data.enableIncompleteTasksHandling !== undefined ? data.enableIncompleteTasksHandling : true;
       errorDetectionToggle.checked = data.enableErrorDetection !== undefined ? data.enableErrorDetection : true;
       
+      // Update theme toggle
+      themeToggle.checked = data.darkThemeEnabled || false;
+      updateThemeStatus(data.darkThemeEnabled || false);
+      
       // Update sound source section visibility
       updateSoundSourceSection();
     });
@@ -100,6 +109,18 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       statusDot.className = "status-dot";
       statusText.textContent = "Disabled - Monitoring paused";
+    }
+  }
+
+  function updateThemeStatus(isDarkTheme) {
+    if (isDarkTheme) {
+      themeStatusDot.className = "status-dot active";
+      themeStatusText.textContent = "Dark Mode";
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      themeStatusDot.className = "status-dot";
+      themeStatusText.textContent = "Light Mode";
+      document.documentElement.setAttribute('data-theme', 'light');
     }
   }
 
@@ -211,7 +232,8 @@ document.addEventListener("DOMContentLoaded", () => {
       enableDesktopNotifications: true,
       enableMouseMovementDetection: true,
       enableIncompleteTasksHandling: true,
-      enableErrorDetection: true
+      enableErrorDetection: true,
+      darkThemeEnabled: false
     };
     chrome.storage.sync.set(defaultSettings, () => {
       loadSettings();
@@ -327,6 +349,22 @@ document.addEventListener("DOMContentLoaded", () => {
     // This function can be used for additional validation if needed
   }
 
+  function handleThemeChange() {
+    const darkThemeEnabled = themeToggle.checked;
+    chrome.storage.sync.set({ darkThemeEnabled }, () => {
+      updateThemeStatus(darkThemeEnabled);
+      showSaveStatus();
+      
+      // Notify all parts of the extension about theme change
+      chrome.runtime.sendMessage({ 
+        action: "themeChanged", 
+        darkThemeEnabled 
+      }).catch(() => {
+        // Ignore errors if no other pages are open
+      });
+    });
+  }
+
   function notifyContentScript() {
     chrome.tabs.query(
       { url: "https://www.raterhub.com/evaluation/rater" },
@@ -345,5 +383,77 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.runtime.sendMessage({ action: "settingsUpdated" }).catch(() => {
       // Ignore errors if popup is not open
     });
+  }
+
+  // Listen for messages from popup and background
+  chrome.runtime.onMessage.addListener(handleRuntimeMessage);
+
+  function handleRuntimeMessage(message, sender, sendResponse) {
+    console.log("Options received message:", message.action, message);
+    
+    if (message.action === 'settingsUpdated') {
+      // Reload settings to update UI
+      loadSettings();
+    } else if (message.action === 'themeChanged') {
+      // Update theme based on message from popup
+      updateThemeStatus(message.darkThemeEnabled);
+      themeToggle.checked = message.darkThemeEnabled;
+      
+      // If this theme change came from another source, update storage to stay in sync
+      if (sender.id !== chrome.runtime.id) {
+        chrome.storage.sync.set({ darkThemeEnabled: message.darkThemeEnabled });
+      }
+    } else if (message.action === 'settingChanged') {
+      // Handle individual setting changes for real-time synchronization
+      console.log(`Setting changed: ${message.setting} = ${message.value}`);
+      
+      // Update the specific setting in the UI
+      switch (message.setting) {
+        case 'enabled':
+          enabledToggle.checked = message.value;
+          updateStatus(message.value);
+          break;
+        case 'mode':
+          if (message.value === 'alarm_only') {
+            alarmOnlyMode.checked = true;
+          } else {
+            alarmAndClickMode.checked = true;
+          }
+          break;
+        case 'refreshInterval':
+          updateIntervalButtons(message.value);
+          currentIntervalSpan.textContent = message.value;
+          break;
+        case 'darkThemeEnabled':
+          themeToggle.checked = message.value;
+          updateThemeStatus(message.value);
+          break;
+        case 'alertSoundType':
+          document.getElementById("soundSourceSelect").value = message.value;
+          updateSoundSourceSection();
+          break;
+        case 'alertSoundData':
+          if (document.getElementById("soundSourceSelect").value === "url") {
+            alertSoundUrl.value = message.value;
+          }
+          break;
+        case 'showTestButton':
+          document.getElementById("showTestButton").checked = message.value;
+          break;
+        case 'enableDesktopNotifications':
+          desktopNotificationsToggle.checked = message.value;
+          break;
+        case 'enableMouseMovementDetection':
+          mouseMovementToggle.checked = message.value;
+          break;
+        case 'enableIncompleteTasksHandling':
+          incompleteTasksToggle.checked = message.value;
+          break;
+        case 'enableErrorDetection':
+          errorDetectionToggle.checked = message.value;
+          break;
+      }
+    }
+    return true; // Keep message channel open for async response
   }
 });

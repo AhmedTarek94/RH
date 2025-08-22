@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Theme Synchronization Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: var(--bg-color, #ffffff);
+            color: var(--text-color, #333333);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 8px;
+            background-color: var(--card-bg, #f9f9f9);
+        }
+        
+        h1 {
+            color: var(--heading-color, #2c3e50);
+            text-align: center;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 5px;
+            background-color: var(--section-bg, #fff);
+        }
+        
+        button {
+            background-color: var(--button-bg, #007bff);
+            color: var(--button-text, white);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: var(--button-hover, #0056b3);
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background-color: var(--status-bg, #e9ecef);
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #ffffff;
+            --border-color: #444;
+            --card-bg: #2d2d2d;
+            --heading-color: #61dafb;
+            --section-bg: #3d3d3d;
+            --button-bg: #61dafb;
+            --button-text: #1a1a1a;
+            --button-hover: #21a1c4;
+            --status-bg: #444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Theme Synchronization Test</h1>
+        
+        <div class="test-section">
+            <h2>Current Theme Status</h2>
+            <div id="themeStatus" class="status info">Loading...</div>
+            <button onclick="checkTheme()">Check Current Theme</button>
+            <button onclick="toggleTheme()">Toggle Theme</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>Message Passing Test</h2>
+            <div id="messageStatus" class="status info">Ready to test</div>
+            <button onclick="testMessagePassing()">Test Message Passing</button>
+            <button onclick="testStorageSync()">Test Storage Sync</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>Extension Pages</h2>
+            <button onclick="openOptions()">Open Options Page</button>
+            <button onclick="openPopup()">Open Popup</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>Test Results</h2>
+            <div id="testResults"></div>
+        </div>
+    </div>
+
+    <script>
+        // Apply theme based on data-theme attribute
+        function applyThemeFromAttribute() {
+            const theme = document.documentElement.getAttribute('data-theme') || 'light';
+            console.log('Theme applied:', theme);
+        }
+        
+        // Check current theme from storage
+        function checkTheme() {
+            chrome.storage.sync.get(['darkThemeEnabled'], (data) => {
+                const isDark = data.darkThemeEnabled || false;
+                const themeStatus = document.getElementById('themeStatus');
+                themeStatus.textContent = `Current theme: ${isDark ? 'Dark' : 'Light'} Mode`;
+                themeStatus.className = 'status ' + (isDark ? 'success' : 'info');
+                
+                // Update the page theme to match
+                document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            });
+        }
+        
+        // Toggle theme
+        function toggleTheme() {
+            chrome.storage.sync.get(['darkThemeEnabled'], (data) => {
+                const newTheme = !(data.darkThemeEnabled || false);
+                chrome.storage.sync.set({ darkThemeEnabled: newTheme }, () => {
+                    // Send message to notify other parts
+                    chrome.runtime.sendMessage({
+                        action: "themeChanged",
+                        darkThemeEnabled: newTheme
+                    }).catch(error => {
+                        console.log('No other pages open to receive theme change');
+                    });
+                    
+                    checkTheme();
+                    addTestResult('Theme toggled successfully');
+                });
+            });
+        }
+        
+        // Test message passing
+        function testMessagePassing() {
+            const messageStatus = document.getElementById('messageStatus');
+            messageStatus.textContent = 'Sending test message...';
+            messageStatus.className = 'status info';
+            
+            chrome.runtime.sendMessage({
+                action: "testMessage",
+                timestamp: Date.now()
+            }, (response) => {
+                if (chrome.runtime.lastError) {
+                    messageStatus.textContent = 'Error: ' + chrome.runtime.lastError.message;
+                    messageStatus.className = 'status error';
+                } else if (response && response.success) {
+                    messageStatus.textContent = 'Message delivered successfully!';
+                    messageStatus.className = 'status success';
+                    addTestResult('Message passing test: PASSED');
+                } else {
+                    messageStatus.textContent = 'No response received';
+                    messageStatus.className = 'status error';
+                    addTestResult('Message passing test: FAILED - No response');
+                }
+            });
+        }
+        
+        // Test storage synchronization
+        function testStorageSync() {
+            const testValue = Math.random().toString(36).substring(7);
+            const messageStatus = document.getElementById('messageStatus');
+            messageStatus.textContent = 'Testing storage sync...';
+            messageStatus.className = 'status info';
+            
+            chrome.storage.sync.set({ testSyncValue: testValue }, () => {
+                setTimeout(() => {
+                    chrome.storage.sync.get(['testSyncValue'], (data) => {
+                        if (data.testSyncValue === testValue) {
+                            messageStatus.textContent = 'Storage sync test passed!';
+                            messageStatus.className = 'status success';
+                            addTestResult('Storage synchronization test: PASSED');
+                        } else {
+                            messageStatus.textContent = 'Storage sync test failed';
+                            messageStatus.className = 'status error';
+                            addTestResult('Storage synchronization test: FAILED');
+                        }
+                    });
+                }, 100);
+            });
+        }
+        
+        // Open extension pages
+        function openOptions() {
+            chrome.runtime.openOptionsPage();
+        }
+        
+        function openPopup() {
+            // Popup can't be opened programmatically, but we can show instructions
+            addTestResult('Popup must be opened manually from toolbar');
+        }
+        
+        // Add test results
+        function addTestResult(message) {
+            const resultsDiv = document.getElementById('testResults');
+            const resultItem = document.createElement('div');
+            resultItem.className = 'status info';
+            resultItem.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+            resultsDiv.appendChild(resultItem);
+        }
+        
+        // Listen for theme changes
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            if (message.action === "themeChanged") {
+                console.log('Theme change received:', message.darkThemeEnabled);
+                document.documentElement.setAttribute('data-theme', message.darkThemeEnabled ? 'dark' : 'light');
+                checkTheme();
+                addTestResult('Theme change message received: ' + (message.darkThemeEnabled ? 'Dark' : 'Light'));
+            }
+            
+            if (message.action === "testMessage") {
+                sendResponse({ success: true, receivedAt: Date.now() });
+            }
+            
+            return true;
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkTheme();
+            applyThemeFromAttribute();
+            addTestResult('Test page loaded');
+        });
+    </script>
+</body>
+</html>

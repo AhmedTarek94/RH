@@ -31,6 +31,7 @@
   - Tab monitoring and content script injection
   - 403 error detection and handling
   - Settings synchronization
+  - Theme message routing and forwarding
 
 ### Content Script
 **File**: `content.js`
@@ -52,6 +53,7 @@
   - Mode selection (alarm_only/alarm_and_click)
   - Refresh interval settings
   - Sound source configuration
+  - Theme toggle with real-time sync
   - Options page link
 
 ### Options Page
@@ -62,6 +64,7 @@
   - Sound file upload/URL input
   - Sound testing functionality
   - Advanced settings management
+  - Theme system with cross-page synchronization
 
 ## Utilities & Assets
 
@@ -76,18 +79,25 @@
 - `icons/icon128.png` - 128x128 store icon
 
 ### Styles
-- `styles.css` - Extension styling
+- `styles.css` - Extension styling with theme support
 
 ## Documentation
 
 ### Core Documentation
 - `INSTALLATION_GUIDE.md` - Setup and testing instructions
 - `REFACTOR_SUMMARY.md` - Recent refactoring changes and fixes
+- `README.md` - Main project documentation
 
 ### Planning & Roadmap
 - `UPGRADES.md` - Comprehensive feature roadmap
 - `MILESTONES.md` - Implementation tracking and status
 - `PROJECT_INDEX.md` - This file (project overview)
+- `ENHANCED_UI_PLAN.md` - UI enhancement plans
+- `THEME_INTEGRATION_SUMMARY.md` - Theme system documentation
+
+### Implementation Tracking
+- `TODO_SYNC_IMPLEMENTATION.md` - Theme synchronization progress
+- `TEST_PLAN.md` - Testing procedures and validation
 
 ## Testing
 
@@ -95,6 +105,8 @@
 - `test_extension.html` - Extension functionality tests
 - `test_file_storage.html` - Storage system tests
 - `test_sync.html` - Synchronization tests
+- `test_theme.html` - Theme functionality tests
+- `test_theme_sync.html` - Theme synchronization testing
 
 ## Key Features
 
@@ -105,12 +117,19 @@
 4. **Error Handling**: 403 detection and automatic recovery
 5. **Context Menu**: Right-click access to controls
 6. **Settings Persistence**: Sync storage across devices
+7. **Theme System**: Light/Dark themes with real-time sync
 
 ### Monitoring Logic
 - Checks for "No tasks are currently available" message
 - Detects "Acquire if available" buttons
 - Handles incomplete tasks with user prompts
 - Manages page redirects and error states
+
+### Theme System
+- Real-time synchronization between all extension pages
+- No page reloads required for theme updates
+- Persistent theme preferences across sessions
+- Graceful error handling for closed pages
 
 ## Technical Architecture
 
@@ -124,27 +143,32 @@
 2. Content scripts handle page-specific logic
 3. Popup/Options UI for user configuration
 4. Message passing between components
+5. Real-time theme synchronization
 
 ### Error Handling
 - Comprehensive audio playback fallbacks
 - 403 error detection and recovery
 - Network error handling for URL sounds
 - Storage operation error recovery
+- Theme synchronization fallback mechanisms
 
 ## Development Status
 
-### Current Version: 1.0.0
+### Current Version: 1.5.0
 - ✅ Core monitoring functionality
 - ✅ Audio alert system
 - ✅ Settings management
 - ✅ Context menu controls
 - ✅ Basic error handling
+- ✅ Theme system with synchronization
 
-### Recent Improvements (Refactor)
+### Recent Improvements
 - Audio playback reliability fixes
 - Dual storage strategy implementation
 - HTML structure cleanup
 - Enhanced error handling
+- Theme system implementation
+- Real-time synchronization
 
 ## Dependencies
 
@@ -170,7 +194,7 @@ RHAT_Extension/
 ├── popup.js              # Popup functionality
 ├── options.html          # Settings page
 ├── options.js            # Options functionality
-├── styles.css            # Styling
+├── styles.css            # Styling with themes
 ├── alarm.mp3             # Default sound
 ├── icons/                # Extension icons
 │   ├── icon16.png
@@ -181,6 +205,10 @@ RHAT_Extension/
 ├── UPGRADES.md           # Feature roadmap
 ├── MILESTONES.md         # Progress tracking
 ├── PROJECT_INDEX.md      # This file
+├── ENHANCED_UI_PLAN.md   # UI enhancement plans
+├── THEME_INTEGRATION_SUMMARY.md # Theme system docs
+├── TODO_SYNC_IMPLEMENTATION.md # Theme sync progress
+├── TEST_PLAN.md          # Testing procedures
 └── test_*.html           # Test files
 ```
 
@@ -201,6 +229,7 @@ RHAT_Extension/
 4. Check error handling scenarios
 5. Test settings persistence
 6. Verify cross-device sync (if applicable)
+7. Test theme synchronization
 
 ### Debugging Tips
 - Check Chrome extension console for errors
@@ -208,6 +237,7 @@ RHAT_Extension/
 - Test audio playback in isolation
 - Verify storage operations
 - Monitor network requests for URL sounds
+- Test theme synchronization with test pages
 
 ## Browser Compatibility
 
@@ -230,6 +260,7 @@ RHAT_Extension/
 - File-based sounds = local storage usage
 - URL sounds = network requests
 - Multiple tabs = increased memory usage
+- Theme synchronization = minimal message overhead
 
 ### Optimization Tips
 - Use appropriate refresh intervals
@@ -252,16 +283,21 @@ RHAT_Extension/
 
 ## Version History
 
-### v1.0.0 - Current
+### v1.5.0 - Current
+- Theme system implementation
+- Real-time synchronization
+- Enhanced UI components
+- Comprehensive testing framework
+
+### v1.0.0 - Previous
 - Initial stable release
 - Core monitoring functionality
 - Basic audio alerts
 - Settings management
 
 ### Future Versions
-- v1.1.0: Enhanced error handling
-- v1.2.0: Visual notifications
-- v1.3.0: Basic analytics
+- v1.6.0: Enhanced analytics
+- v1.7.0: Visual notifications
 - v2.0.0: Major feature overhaul
 
 ## Contributing Guidelines
@@ -283,6 +319,7 @@ RHAT_Extension/
 - Verify backward compatibility
 - Check cross-browser functionality
 - Validate error handling
+- Test theme synchronization
 
 ---
 
