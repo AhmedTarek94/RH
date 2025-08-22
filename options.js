@@ -28,7 +28,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const themeStatusDot = document.getElementById("themeStatusDot");
   const themeStatusText = document.getElementById("themeStatusText");
 
-  // Load current settings
+  // Apply dark theme immediately on load (default)
+  updateThemeStatus(true);
+  
+  // Load current settings (will override theme if different)
   loadSettings();
 
   // Event listeners

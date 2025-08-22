@@ -18,7 +18,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let testAudio = null;
   let isPlaying = false;
 
-  // Load current settings
+  // Apply dark theme immediately on load (default)
+  applyTheme(true);
+  
+  // Load current settings (will override theme if different)
   loadSettings();
 
   // Event listeners
