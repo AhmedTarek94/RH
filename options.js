@@ -28,6 +28,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const themeStatusDot = document.getElementById("themeStatusDot");
   const themeStatusText = document.getElementById("themeStatusText");
 
+  // Filter UI elements
+  const taskTypeCheckboxes = document.querySelectorAll('#taskTypeFilter input[name="taskType"]');
+  const minDurationInput = document.getElementById("minDuration");
+  const maxDurationInput = document.getElementById("maxDuration");
+  const timeRangeToggle = document.getElementById("timeRangeToggle");
+  const timeRangeStartInput = document.getElementById("timeRangeStart");
+  const timeRangeEndInput = document.getElementById("timeRangeEnd");
+  const daysOfWeekCheckboxes = document.querySelectorAll('#daysOfWeekFilter input[name="day"]');
+  const minRewardInput = document.getElementById("minReward");
+  const presetSelect = document.getElementById("presetSelect");
+  const savePresetBtn = document.getElementById("savePresetBtn");
+  const deletePresetBtn = document.getElementById("deletePresetBtn");
+
   // Apply dark theme immediately on load (default)
   updateThemeStatus(true);
   
@@ -77,7 +90,15 @@ document.addEventListener("DOMContentLoaded", () => {
       "enableMouseMovementDetection",
       "enableIncompleteTasksHandling",
       "enableErrorDetection",
-      "darkThemeEnabled"
+      "darkThemeEnabled",
+      "taskTypeFilter",
+      "minDuration",
+      "maxDuration",
+      "timeRangeEnabled",
+      "timeRangeStart",
+      "timeRangeEnd",
+      "daysOfWeekFilter",
+      "minReward"
     ], (data) => {
       // Update UI elements
       document.getElementById("enabledToggle").checked = data.enabled || false;
@@ -106,6 +127,9 @@ document.addEventListener("DOMContentLoaded", () => {
       // Update theme toggle
       themeToggle.checked = data.darkThemeEnabled || false;
       updateThemeStatus(data.darkThemeEnabled || false);
+      
+  // Update filter settings
+  updateFilterSettings(data);
       
       // Update sound source section visibility
       updateSoundSourceSection();
@@ -537,4 +561,280 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     return true; // Keep message channel open for async response
   }
+
+  // Filter-related functions
+  function updateFilterSettings(data) {
+    // Update task type checkboxes
+    const taskTypeFilter = data.taskTypeFilter || ["search", "evaluation", "comparison"];
+    taskTypeCheckboxes.forEach(checkbox => {
+      checkbox.checked = taskTypeFilter.includes(checkbox.value);
+    });
+
+    // Update duration inputs
+    minDurationInput.value = data.minDuration || 1;
+    maxDurationInput.value = data.maxDuration || 60;
+
+    // Update time range settings
+    timeRangeToggle.checked = data.timeRangeEnabled || false;
+    timeRangeStartInput.value = data.timeRangeStart || "09:00";
+    timeRangeEndInput.value = data.timeRangeEnd || "17:00";
+    updateTimeRangeVisibility();
+
+    // Update days of week checkboxes
+    const daysOfWeekFilter = data.daysOfWeekFilter || ["mon", "tue", "wed", "thu", "fri"];
+    daysOfWeekCheckboxes.forEach(checkbox => {
+      checkbox.checked = daysOfWeekFilter.includes(checkbox.value);
+    });
+
+    // Update minimum reward
+    minRewardInput.value = data.minReward || 0.05;
+
+    // Update preset dropdown
+    updatePresetDropdown();
+  }
+
+  function updateTimeRangeVisibility() {
+    const timeRangeContainer = document.getElementById("timeRangeContainer");
+    if (timeRangeToggle.checked) {
+      timeRangeContainer.style.display = "block";
+    } else {
+      timeRangeContainer.style.display = "none";
+    }
+  }
+
+  function updatePresetDropdown() {
+    // This would load saved presets from storage
+    chrome.storage.sync.get(["filterPresets"], (data) => {
+      const presets = data.filterPresets || {};
+      presetSelect.innerHTML = '<option value="">Select a preset...</option>';
+      
+      for (const [name, preset] of Object.entries(presets)) {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        presetSelect.appendChild(option);
+      }
+    });
+  }
+
+  function handleTaskTypeChange() {
+    const selectedTypes = Array.from(taskTypeCheckboxes)
+      .filter(checkbox => checkbox.checked)
+      .map(checkbox => checkbox.value);
+    
+    chrome.storage.sync.set({ taskTypeFilter: selectedTypes }, () => {
+      showSaveStatus();
+      notifyContentScript();
+    });
+  }
+
+  function handleDurationChange() {
+    const minDuration = parseInt(minDurationInput.value) || 1;
+    const maxDuration = parseInt(maxDurationInput.value) || 60;
+    
+    // Validate min <= max
+    if (minDuration > maxDuration) {
+      minDurationInput.value = maxDuration;
+      chrome.storage.sync.set({ 
+        minDuration: maxDuration, 
+        maxDuration: maxDuration 
+      }, () => {
+        showSaveStatus("Duration range adjusted", "success");
+        notifyContentScript();
+      });
+    } else {
+      chrome.storage.sync.set({ 
+        minDuration: minDuration, 
+        maxDuration: maxDuration 
+      }, () => {
+        showSaveStatus();
+        notifyContentScript();
+      });
+    }
+  }
+
+  function handleTimeRangeToggle() {
+    const enabled = timeRangeToggle.checked;
+    chrome.storage.sync.set({ timeRangeEnabled: enabled }, () => {
+      updateTimeRangeVisibility();
+      showSaveStatus();
+      notifyContentScript();
+    });
+  }
+
+  function handleTimeRangeChange() {
+    const startTime = timeRangeStartInput.value;
+    const endTime = timeRangeEndInput.value;
+    
+    chrome.storage.sync.set({ 
+      timeRangeStart: startTime, 
+      timeRangeEnd: endTime 
+    }, () => {
+      showSaveStatus();
+      notifyContentScript();
+    });
+  }
+
+  function handleDaysOfWeekChange() {
+    const selectedDays = Array.from(daysOfWeekCheckboxes)
+      .filter(checkbox => checkbox.checked)
+      .map(checkbox => checkbox.value);
+    
+    chrome.storage.sync.set({ daysOfWeekFilter: selectedDays }, () => {
+      showSaveStatus();
+      notifyContentScript();
+    });
+  }
+
+  function handleMinRewardChange() {
+    const minReward = parseFloat(minRewardInput.value) || 0.05;
+    chrome.storage.sync.set({ minReward: minReward }, () => {
+      showSaveStatus();
+      notifyContentScript();
+    });
+  }
+
+  function handlePresetSelect() {
+    const presetName = presetSelect.value;
+    if (!presetName) return;
+
+    chrome.storage.sync.get(["filterPresets"], (data) => {
+      const presets = data.filterPresets || {};
+      const preset = presets[presetName];
+      
+      if (preset) {
+        // Apply the preset settings
+        chrome.storage.sync.set(preset, () => {
+          loadSettings();
+          showSaveStatus(`Preset "${presetName}" applied!`, "success");
+          notifyContentScript();
+        });
+      }
+    });
+  }
+
+  function handleSavePreset() {
+    const presetName = prompt("Enter a name for this preset:");
+    if (!presetName) return;
+
+    // Get current filter settings
+    chrome.storage.sync.get([
+      "taskTypeFilter", "minDuration", "maxDuration", 
+      "timeRangeEnabled", "timeRangeStart", "timeRangeEnd",
+      "daysOfWeekFilter", "minReward"
+    ], (data) => {
+      const preset = {
+        taskTypeFilter: data.taskTypeFilter || ["search", "evaluation", "comparison"],
+        minDuration: data.minDuration || 1,
+        maxDuration: data.maxDuration || 60,
+        timeRangeEnabled: data.timeRangeEnabled || false,
+        timeRangeStart: data.timeRangeStart || "09:00",
+        timeRangeEnd: data.timeRangeEnd || "17:00",
+        daysOfWeekFilter: data.daysOfWeekFilter || ["mon", "tue", "wed", "thu", "fri"],
+        minReward: data.minReward || 0.05
+      };
+
+      // Save the preset
+      chrome.storage.sync.get(["filterPresets"], (storageData) => {
+        const presets = storageData.filterPresets || {};
+        presets[presetName] = preset;
+        
+        chrome.storage.sync.set({ filterPresets: presets }, () => {
+          updatePresetDropdown();
+          showSaveStatus(`Preset "${presetName}" saved!`, "success");
+        });
+      });
+    });
+  }
+
+  function handleDeletePreset() {
+    const presetName = presetSelect.value;
+    if (!presetName) {
+      alert("Please select a preset to delete.");
+      return;
+    }
+
+    if (confirm(`Are you sure you want to delete the preset "${presetName}"?`)) {
+      chrome.storage.sync.get(["filterPresets"], (data) => {
+        const presets = data.filterPresets || {};
+        delete presets[presetName];
+        
+        chrome.storage.sync.set({ filterPresets: presets }, () => {
+          updatePresetDropdown();
+          showSaveStatus(`Preset "${presetName}" deleted!`, "success");
+        });
+      });
+    }
+  }
+
+  // Add event listeners for filter controls
+  taskTypeCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener("change", handleTaskTypeChange);
+  });
+
+  minDurationInput.addEventListener("change", handleDurationChange);
+  maxDurationInput.addEventListener("change", handleDurationChange);
+  timeRangeToggle.addEventListener("change", handleTimeRangeToggle);
+  timeRangeStartInput.addEventListener("change", handleTimeRangeChange);
+  timeRangeEndInput.addEventListener("change", handleTimeRangeChange);
+  daysOfWeekCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener("change", handleDaysOfWeekChange);
+  });
+  minRewardInput.addEventListener("change", handleMinRewardChange);
+  presetSelect.addEventListener("change", handlePresetSelect);
+  savePresetBtn.addEventListener("click", handleSavePreset);
+  deletePresetBtn.addEventListener("click", handleDeletePreset);
+
+  // Initialize time range visibility
+  updateTimeRangeVisibility();
+
+  // Tab switching functionality
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const tabId = button.dataset.tab;
+      
+      // Update active tab button
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+      
+      // Show corresponding tab content
+      tabContents.forEach(content => content.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+    });
+  });
+
+  // Filtering master switch functionality
+  const filteringToggle = document.getElementById("filteringToggle");
+  const filteringStatusDot = document.getElementById("filteringStatusDot");
+  const filteringStatusText = document.getElementById("filteringStatusText");
+
+  filteringToggle.addEventListener("change", handleFilteringToggleChange);
+
+  function handleFilteringToggleChange() {
+    const enabled = filteringToggle.checked;
+    chrome.storage.sync.set({ filteringEnabled: enabled }, () => {
+      updateFilteringStatus(enabled);
+      showSaveStatus();
+      notifyContentScript();
+    });
+  }
+
+  function updateFilteringStatus(enabled) {
+    if (enabled) {
+      filteringStatusDot.className = "status-dot active";
+      filteringStatusText.textContent = "Filtering Enabled";
+    } else {
+      filteringStatusDot.className = "status-dot";
+      filteringStatusText.textContent = "Filtering Disabled";
+    }
+  }
+
+  // Load filtering enabled state
+  chrome.storage.sync.get(["filteringEnabled"], (data) => {
+    filteringToggle.checked = data.filteringEnabled || false;
+    updateFilteringStatus(data.filteringEnabled || false);
+  });
 });

@@ -18,7 +18,16 @@ if (window.raterHubMonitorLoaded) {
     alertSoundType: "default",
     alertSoundData: "",
     showTestButton: false, // Added for controlling test button visibility
-    enableDesktopNotifications: true // New setting for desktop notifications
+    enableDesktopNotifications: true, // New setting for desktop notifications
+    // Filter settings with defaults
+    taskTypeFilter: ["search", "evaluation", "comparison"],
+    minDuration: 1,
+    maxDuration: 60,
+    timeRangeEnabled: false,
+    timeRangeStart: "09:00",
+    timeRangeEnd: "17:00",
+    daysOfWeekFilter: ["mon", "tue", "wed", "thu", "fri"],
+    minReward: 0.05
   };
 
   // Initialize the monitor when the page loads
@@ -41,7 +50,13 @@ if (window.raterHubMonitorLoaded) {
   }
 
   function loadSettings() {
-    chrome.storage.sync.get(["enabled", "mode", "refreshInterval", "alertSoundType", "alertSoundData", "showTestButton", "enableDesktopNotifications"], (data) => {
+    chrome.storage.sync.get([
+      "enabled", "mode", "refreshInterval", "alertSoundType", "alertSoundData", 
+      "showTestButton", "enableDesktopNotifications",
+      // Filter settings
+      "taskTypeFilter", "minDuration", "maxDuration", "timeRangeEnabled", 
+      "timeRangeStart", "timeRangeEnd", "daysOfWeekFilter", "minReward"
+    ], (data) => {
       let interval = data.refreshInterval;
       if (typeof interval === "string") interval = parseFloat(interval);
       
@@ -52,7 +67,16 @@ if (window.raterHubMonitorLoaded) {
         alertSoundType: data.alertSoundType || "default",
         alertSoundData: data.alertSoundData || "",
         showTestButton: data.showTestButton || false, // Load showTestButton setting
-        enableDesktopNotifications: data.enableDesktopNotifications !== undefined ? data.enableDesktopNotifications : true // Default to true if not set
+        enableDesktopNotifications: data.enableDesktopNotifications !== undefined ? data.enableDesktopNotifications : true, // Default to true if not set
+        // Filter settings with defaults
+        taskTypeFilter: data.taskTypeFilter || ["search", "evaluation", "comparison"],
+        minDuration: data.minDuration !== undefined ? data.minDuration : 1,
+        maxDuration: data.maxDuration !== undefined ? data.maxDuration : 60,
+        timeRangeEnabled: data.timeRangeEnabled || false,
+        timeRangeStart: data.timeRangeStart || "09:00",
+        timeRangeEnd: data.timeRangeEnd || "17:00",
+        daysOfWeekFilter: data.daysOfWeekFilter || ["mon", "tue", "wed", "thu", "fri"],
+        minReward: data.minReward !== undefined ? data.minReward : 0.05
       };
 
       console.log("RaterHub Monitor: Current settings:", currentSettings);
@@ -108,14 +132,16 @@ if (window.raterHubMonitorLoaded) {
       return;
     }
 
-    // Check for 403 Forbidden error on task/show pages
-    if (currentUrl.includes("/task/show") && 
+    // Check for 403 Forbidden error on task/show pages or task/index pages
+    if ((currentUrl.includes("/task/show") && 
         (document.body.innerText.includes("Error 403 Forbidden") || 
-         document.body.innerText.includes("This task has already been SUBMITTED"))) {
-      console.log("RaterHub Monitor: Task already submitted detected on task/show page, redirecting to main page");
+         document.body.innerText.includes("This task has already been SUBMITTED"))) ||
+        currentUrl === indexUrl) {
+      console.log("RaterHub Monitor: Task already submitted or index page detected, redirecting to main page");
       console.log("RaterHub Monitor: Current URL:", currentUrl);
       console.log("RaterHub Monitor: Page content contains 'Error 403 Forbidden':", document.body.innerText.includes("Error 403 Forbidden"));
       console.log("RaterHub Monitor: Page content contains 'This task has already been SUBMITTED':", document.body.innerText.includes("This task has already been SUBMITTED"));
+      console.log("RaterHub Monitor: Is index page:", currentUrl === indexUrl);
       console.log("RaterHub Monitor: Redirecting to:", mainUrl);
       window.location.href = mainUrl;
       return;
@@ -258,60 +284,68 @@ if (window.raterHubMonitorLoaded) {
       // Redirect to main page
       window.location.href = "https://www.raterhub.com/evaluation/rater";
     } else if (!noTasksExists && acquireButton) {
-      // Tasks are available!
-      console.log("RaterHub Monitor: Tasks available! Stopping monitoring and playing alarm...");
+      // Tasks are available! Check if they match filter criteria
+      console.log("RaterHub Monitor: Tasks available! Checking filter criteria...");
       console.log("RaterHub Monitor: Current mode:", currentSettings.mode);
       console.log("RaterHub Monitor: Acquire button found:", acquireButton);
       console.log("RaterHub Monitor: Button text:", acquireButton.textContent || acquireButton.value || "No text");
       console.log("RaterHub Monitor: Button tag:", acquireButton.tagName);
       console.log("RaterHub Monitor: Button href:", acquireButton.href || "No href");
       
-      stopMonitoring(); // Stop monitoring immediately
+      // Check if tasks match filter criteria
+      const tasksMatchFilters = checkTaskFilters();
+      
+      if (tasksMatchFilters) {
+        console.log("RaterHub Monitor: Tasks match filter criteria! Stopping monitoring and playing alarm...");
+        stopMonitoring(); // Stop monitoring immediately
 
-      if (currentSettings.mode === "alarm_and_click") {
-        // Click the acquire button instantly first, then play alarm
-        console.log("RaterHub Monitor: Auto-clicking acquire button instantly");
-        
-        // Small delay to ensure button is fully ready
-        setTimeout(() => {
-          try {
-            // Try standard click first
-            acquireButton.click();
-            console.log("RaterHub Monitor: Button click executed successfully");
-          } catch (error) {
-            console.error("RaterHub Monitor: Error clicking button:", error);
-            
-            // Try alternative click methods
+        if (currentSettings.mode === "alarm_and_click") {
+          // Click the acquire button instantly first, then play alarm
+          console.log("RaterHub Monitor: Auto-clicking acquire button instantly");
+          
+          // Small delay to ensure button is fully ready
+          setTimeout(() => {
             try {
-              if (acquireButton.tagName === 'A') {
-                // For links, try to navigate directly
-                console.log("RaterHub Monitor: Trying direct navigation for link");
-                window.location.href = acquireButton.href;
-              } else {
-                // For buttons, try dispatching a click event
-                console.log("RaterHub Monitor: Trying dispatched click event");
-                const clickEvent = new MouseEvent('click', {
-                  view: window,
-                  bubbles: true,
-                  cancelable: true
-                });
-                acquireButton.dispatchEvent(clickEvent);
+              // Try standard click first
+              acquireButton.click();
+              console.log("RaterHub Monitor: Button click executed successfully");
+            } catch (error) {
+              console.error("RaterHub Monitor: Error clicking button:", error);
+              
+              // Try alternative click methods
+              try {
+                if (acquireButton.tagName === 'A') {
+                  // For links, try to navigate directly
+                  console.log("RaterHub Monitor: Trying direct navigation for link");
+                  window.location.href = acquireButton.href;
+                } else {
+                  // For buttons, try dispatching a click event
+                  console.log("RaterHub Monitor: Trying dispatched click event");
+                  const clickEvent = new MouseEvent('click', {
+                    view: window,
+                    bubbles: true,
+                    cancelable: true
+                  });
+                  acquireButton.dispatchEvent(clickEvent);
+                }
+                console.log("RaterHub Monitor: Alternative click method executed");
+              } catch (altError) {
+                console.error("RaterHub Monitor: Alternative click method also failed:", altError);
               }
-              console.log("RaterHub Monitor: Alternative click method executed");
-            } catch (altError) {
-              console.error("RaterHub Monitor: Alternative click method also failed:", altError);
             }
-          }
-        }, 50); // 50ms delay to ensure button is ready
-        
-        // Play alarm after clicking the button
-        setTimeout(() => {
+          }, 50); // 50ms delay to ensure button is ready
+          
+          // Play alarm after clicking the button
+          setTimeout(() => {
+            playAlarm();
+          }, 100); // Small delay to ensure button click is processed first
+        } else {
+          // Alarm only mode - just play alarm
+          console.log("RaterHub Monitor: Alarm only mode - not auto-clicking button");
           playAlarm();
-        }, 100); // Small delay to ensure button click is processed first
+        }
       } else {
-        // Alarm only mode - just play alarm
-        console.log("RaterHub Monitor: Alarm only mode - not auto-clicking button");
-        playAlarm();
+        console.log("RaterHub Monitor: Tasks do not match filter criteria, continuing monitoring");
       }
     } else if (!noTasksExists && !acquireButton) {
       // Page might be in a different state - don't refresh, just wait for next interval
@@ -512,6 +546,15 @@ if (window.raterHubMonitorLoaded) {
         incompleteTasksDetected = false;
       }
     });
+  }
+
+  function checkTaskFilters() {
+    console.log("RaterHub Monitor: Checking task filters...");
+    console.log("RaterHub Monitor: Current filter settings:", currentSettings);
+    
+    // For now, return true to indicate tasks match filter criteria
+    // This will be implemented with actual task filtering logic
+    return true;
   }
 
   function findAcquireButton() {

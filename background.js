@@ -1,5 +1,8 @@
 // Background script for RaterHub Task Monitor
 
+// Import filter management system
+importScripts('filters.js');
+
 // Initialize default settings
 chrome.runtime.onInstalled.addListener(() => {
   const defaultSettings = {
@@ -13,7 +16,21 @@ chrome.runtime.onInstalled.addListener(() => {
     enableMouseMovementDetection: true, // Stop alarm on mouse movement
     enableIncompleteTasksHandling: true, // Handle incomplete tasks
     enableErrorDetection: true, // Enable enhanced error detection
-    darkThemeEnabled: true // Dark theme setting
+    darkThemeEnabled: true, // Dark theme setting
+    filters: {
+      taskTypes: [],
+      minDuration: 0,
+      maxDuration: 0,
+      timeRange: {
+        enabled: false,
+        start: '09:00',
+        end: '17:00'
+      },
+      daysOfWeek: [1, 2, 3, 4, 5],
+      minReward: 0,
+      customRules: []
+    },
+    filterPresets: {}
   };
 
   chrome.storage.sync.set(defaultSettings);
@@ -22,6 +39,9 @@ chrome.runtime.onInstalled.addListener(() => {
   
   // Start periodic tab scanning for 403 errors
   startTabScanner();
+  
+  // Initialize filter manager with default settings
+  filterManager.loadFilters();
 });
 
 chrome.runtime.onStartup.addListener(() => {
@@ -402,6 +422,14 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             checkTabForMainPageMonitoring(tabId, tab.url);
           }, 1000); // Wait 1 second for page to fully render
         }
+        
+        // If this is a task/index page, redirect to main page
+        if (isTaskIndexTab(tab.url)) {
+          console.log(`Task/index page detected, redirecting to main page`);
+          setTimeout(() => {
+            redirectTabToMainPage(tabId);
+          }, 1000); // Wait 1 second for page to fully render
+        }
       }
     });
   }
@@ -427,6 +455,16 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
         if (data.enabled) {
           setTimeout(() => {
             checkTabForMainPageMonitoring(activeInfo.tabId, tab.url);
+          }, 500); // Wait 500ms for tab to fully activate
+        }
+      });
+    } else if (tab.url && isTaskIndexTab(tab.url)) {
+      console.log(`Activated task/index tab ${activeInfo.tabId}, redirecting to main page`);
+      
+      chrome.storage.sync.get(["enabled"], (data) => {
+        if (data.enabled) {
+          setTimeout(() => {
+            redirectTabToMainPage(activeInfo.tabId);
           }, 500); // Wait 500ms for tab to fully activate
         }
       });
@@ -469,6 +507,9 @@ function scanAllTabsForMainPage() {
       tabs.forEach((tab) => {
         if (isMainPageTab(tab.url)) {
           checkTabForMainPageMonitoring(tab.id, tab.url);
+        } else if (isTaskIndexTab(tab.url)) {
+          console.log(`Task/index page detected in tab ${tab.id}, redirecting to main page`);
+          redirectTabToMainPage(tab.id);
         }
       });
     });
@@ -483,6 +524,11 @@ function isTaskShowTab(url) {
 function isMainPageTab(url) {
   if (!url) return false;
   return url === "https://www.raterhub.com/evaluation/rater";
+}
+
+function isTaskIndexTab(url) {
+  if (!url) return false;
+  return url === "https://www.raterhub.com/evaluation/rater/task/index";
 }
 
 function checkTabFor403Error(tabId, url) {

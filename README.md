@@ -7,6 +7,18 @@ A Chrome extension developed by **Ahmed Tarek** that automates task monitoring a
 
 ## Version History
 
+### v1.8.0 - Advanced Filtering System
+- **Advanced Task Filtering**: Comprehensive filtering system for task selection
+- **Multiple Filter Types**: Task type, duration, time range, days of week, and reward filtering
+- **Custom Rules**: Support for custom filtering rules and presets
+- **Preset Management**: Save and load filter configurations
+- **Real-time Filter Application**: Filters applied during task monitoring
+
+### v1.7.2 - Theme Enhancements
+- **Dark Theme Default**: Set dark theme as default for better user experience
+- **Improved Visibility**: Enhanced radio button visibility in dark mode
+- **Default Settings Optimization**: Optimized default settings for better performance
+
 ### v1.7.1 - UI Improvements
 - **Settings Layout Refactor**: Moved Alert Sound card into settings-grid for better organization and consistency
 - **Enhanced User Experience**: Improved visual hierarchy and grouping of related settings
@@ -30,11 +42,13 @@ A Chrome extension developed by **Ahmed Tarek** that automates task monitoring a
 - **Automatic Task Monitoring**: Continuously checks for available tasks
 - **Smart Notifications**: Audio alerts and desktop notifications
 - **Auto-Acquire Mode**: Automatically clicks "Acquire" when tasks are available
+- **Advanced Task Filtering**: Comprehensive filtering system for task selection
 - **Customizable Settings**: Adjust refresh intervals, sound alerts, and more
 - **Error Handling**: Automatically detects and handles 403 errors
 - **Incomplete Task Detection**: Identifies and handles incomplete tasks
 - **Mouse Movement Detection**: Stops alarms when user activity is detected
 - **Theme Support**: Light/Dark theme with real-time synchronization
+- **Preset Management**: Save and load filter configurations
 
 ## Installation
 
@@ -66,6 +80,8 @@ Access the settings page by right-clicking the extension icon and selecting "Opt
 - **Incomplete Tasks Handling**: Handle incomplete tasks
 - **Enhanced Error Detection**: Improved error detection
 - **Theme**: Light/Dark theme selection
+- **Task Filtering**: Advanced filtering options for task selection
+- **Filter Presets**: Save and load filter configurations
 
 ## Real-time Synchronization System
 
@@ -88,6 +104,7 @@ The extension consists of several key components developed by Ahmed Tarek:
 - `popup.js`: Popup interface logic with real-time synchronization
 - `options.js`: Settings page logic with instant updates
 - `styles.css`: Comprehensive styling with theme variables
+- `filters.js`: Advanced filtering system for task selection
 - Test files for comprehensive validation
 
 ### Technical Implementation:
@@ -102,6 +119,8 @@ The extension consists of several key components developed by Ahmed Tarek:
 Use the provided test files to verify functionality:
 - `test_sync_complete.html`: Comprehensive real-time synchronization testing
 - `test_theme_sync.html`: Theme synchronization validation
+- `test_filters.html`: Advanced filtering system testing
+- `test_error_handling.html`: Error handling and page redirection testing
 - Automated test suites for all features
 
 ## License
