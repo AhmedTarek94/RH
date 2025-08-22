@@ -12,9 +12,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const saveStatus = document.getElementById("saveStatus");
   const alertSoundFile = document.getElementById("alertSoundFile");
   const alertSoundUrl = document.getElementById("alertSoundUrl");
-  const saveAlertSoundBtn = document.getElementById("saveAlertSoundBtn");
-  const testAlertSoundBtn = document.getElementById("testAlertSoundBtn");
+  const playPauseSoundBtn = document.getElementById("playPauseSoundBtn");
+  const stopSoundBtn = document.getElementById("stopSoundBtn");
+  const playPauseIcon = document.getElementById("playPauseIcon");
   const soundErrorMsg = document.getElementById("soundErrorMsg");
+  let testAudio = null;
+  let isPlaying = false;
   
   // New settings elements
   const desktopNotificationsToggle = document.getElementById("desktopNotificationsToggle");
@@ -39,14 +42,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   resetBtn.addEventListener("click", handleReset);
-  saveAlertSoundBtn.addEventListener("click", handleSaveAlertSound);
-  testAlertSoundBtn.addEventListener("click", handleTestAlertSound);
+  playPauseSoundBtn.addEventListener("click", handlePlayPauseSound);
+  stopSoundBtn.addEventListener("click", handleStopSound);
   
   // Test button toggle
   document.getElementById("showTestButton").addEventListener("change", handleShowTestButtonChange);
   
   // Sound source select
   document.getElementById("soundSourceSelect").addEventListener("change", updateSoundSourceSection);
+  
+  // Sound input event listeners
+  alertSoundFile.addEventListener("change", handleFileChange);
+  alertSoundUrl.addEventListener("input", handleUrlChange);
   
   // New settings event listeners
   desktopNotificationsToggle.addEventListener("change", handleDesktopNotificationsChange);
@@ -242,14 +249,109 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Save alert sound (file or URL)
-  function handleSaveAlertSound() {
+
+  // Play/Pause alert sound
+  function handlePlayPauseSound() {
     soundErrorMsg.style.display = "none";
+    chrome.storage.sync.get(["alertSoundType", "alertSoundData"], (data) => {
+      if (data.alertSoundType === "default") {
+        // Play default alarm sound from extension
+        if (!testAudio) {
+          testAudio = new Audio(chrome.runtime.getURL("alarm.mp3"));
+          testAudio.volume = 1.0;
+          testAudio.play();
+          isPlaying = true;
+          playPauseIcon.innerHTML = "&#10073;&#10073;";
+          testAudio.onended = resetPlayPause;
+        } else if (isPlaying) {
+          testAudio.pause();
+          isPlaying = false;
+          playPauseIcon.innerHTML = "&#9654;";
+        } else {
+          testAudio.play();
+          isPlaying = true;
+          playPauseIcon.innerHTML = "&#10073;&#10073;";
+        }
+      } else if (data.alertSoundType === "file") {
+        chrome.storage.local.get(["alertSoundData"], (localData) => {
+          if (!localData.alertSoundData) {
+            soundErrorMsg.textContent = "No MP3 file selected.";
+            soundErrorMsg.style.display = "block";
+            return;
+          }
+          if (!testAudio) {
+            testAudio = new Audio(localData.alertSoundData);
+            testAudio.volume = 1.0;
+            testAudio.play();
+            isPlaying = true;
+            playPauseIcon.innerHTML = "&#10073;&#10073;";
+            testAudio.onended = resetPlayPause;
+          } else if (isPlaying) {
+            testAudio.pause();
+            isPlaying = false;
+            playPauseIcon.innerHTML = "&#9654;";
+          } else {
+            testAudio.play();
+            isPlaying = true;
+            playPauseIcon.innerHTML = "&#10073;&#10073;";
+          }
+        });
+      } else if (data.alertSoundType === "url" && data.alertSoundData) {
+        if (!data.alertSoundData.match(/\.mp3($|\?)/i)) {
+          soundErrorMsg.textContent = "URL must end with .mp3";
+          soundErrorMsg.style.display = "block";
+          return;
+        }
+        if (!testAudio) {
+          testAudio = new Audio(data.alertSoundData);
+          testAudio.volume = 1.0;
+          testAudio.play();
+          isPlaying = true;
+          playPauseIcon.innerHTML = "&#10073;&#10073;";
+          testAudio.onended = resetPlayPause;
+        } else if (isPlaying) {
+          testAudio.pause();
+          isPlaying = false;
+          playPauseIcon.innerHTML = "&#9654;";
+        } else {
+          testAudio.play();
+          isPlaying = true;
+          playPauseIcon.innerHTML = "&#10073;&#10073;";
+        }
+      } else {
+        soundErrorMsg.textContent = "No sound file or link selected.";
+        soundErrorMsg.style.display = "block";
+      }
+    });
+  }
+
+  function handleStopSound() {
+    soundErrorMsg.style.display = "none";
+    if (testAudio) {
+      testAudio.pause();
+      testAudio.currentTime = 0;
+      isPlaying = false;
+      playPauseIcon.innerHTML = "&#9654;";
+      testAudio = null;
+    } else {
+      soundErrorMsg.textContent = "No sound is playing.";
+      soundErrorMsg.style.display = "block";
+    }
+  }
+
+  function resetPlayPause() {
+    isPlaying = false;
+    playPauseIcon.innerHTML = "&#9654;";
+    testAudio = null;
+  }
+
+  // Handle file selection changes
+  function handleFileChange() {
     if (alertSoundFile.files.length > 0) {
       const file = alertSoundFile.files[0];
       if (!file.name.toLowerCase().endsWith(".mp3")) {
         soundErrorMsg.textContent = "Please select an MP3 file.";
-        soundErrorMsg.style.display = "inline-block";
+        soundErrorMsg.style.display = "block";
         return;
       }
       const reader = new FileReader();
@@ -267,11 +369,16 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       };
       reader.readAsDataURL(file);
-    } else if (alertSoundUrl.value.trim()) {
-      const url = alertSoundUrl.value.trim();
+    }
+  }
+
+  // Handle URL input changes
+  function handleUrlChange() {
+    const url = alertSoundUrl.value.trim();
+    if (url) {
       if (!url.match(/\.mp3($|\?)/i)) {
         soundErrorMsg.textContent = "URL must end with .mp3";
-        soundErrorMsg.style.display = "inline-block";
+        soundErrorMsg.style.display = "block";
         return;
       }
       chrome.storage.sync.set(
@@ -282,6 +389,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       );
     } else {
+      // If URL is empty, revert to default
       chrome.storage.sync.set(
         { alertSoundType: "default", alertSoundData: "" },
         () => {
@@ -290,36 +398,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       );
     }
-  }
-
-  // Test alert sound
-  function handleTestAlertSound() {
-    soundErrorMsg.style.display = "none";
-    chrome.storage.sync.get(["alertSoundType", "alertSoundData"], (data) => {
-      let audio;
-      if (data.alertSoundType === "default") {
-        // Play default alarm sound from extension
-        audio = new Audio(chrome.runtime.getURL("alarm.mp3"));
-        audio.volume = 1.0;
-        audio.play();
-      } else if (data.alertSoundType === "file" && data.alertSoundData) {
-        audio = new Audio(data.alertSoundData);
-        audio.volume = 1.0;
-        audio.play();
-      } else if (data.alertSoundType === "url" && data.alertSoundData) {
-        if (!data.alertSoundData.match(/\.mp3($|\?)/i)) {
-          soundErrorMsg.textContent = "URL must end with .mp3";
-          soundErrorMsg.style.display = "inline-block";
-          return;
-        }
-        audio = new Audio(data.alertSoundData);
-        audio.volume = 1.0;
-        audio.play();
-      } else {
-        soundErrorMsg.textContent = "No sound file or link selected.";
-        soundErrorMsg.style.display = "inline-block";
-      }
-    });
   }
 
   // Update sound source section visibility

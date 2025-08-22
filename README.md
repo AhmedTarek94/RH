@@ -1,6 +1,25 @@
 # RHAT - RaterHub Automated Tasks
 
-A Chrome extension that automates task monitoring and acquisition on RaterHub platform.
+A Chrome extension developed by **Ahmed Tarek** that automates task monitoring and acquisition on RaterHub platform.
+
+## Developer
+**Ahmed Tarek** - Extension Developer & Maintainer
+
+## Version History
+
+### v1.7 - Real-time Synchronization Release
+- **Instant Theme Sync**: Real-time theme synchronization between all extension components
+- **Individual Setting Updates**: Targeted UI updates without page reloads
+- **Enhanced Message Passing**: Robust cross-component communication
+- **Performance Optimization**: Reduced CPU usage with efficient updates
+- **Comprehensive Testing**: Complete test framework and documentation
+
+### v1.5 - Enhanced Features
+- **Desktop Notifications**: Browser notifications for task availability
+- **Mouse Movement Detection**: Automatically stops alarm sounds when mouse movement is detected
+- **Incomplete Tasks Handling**: Detects and handles incomplete tasks with popup notifications
+- **Enhanced Error Detection**: Improved 403 error detection and handling
+- **Theme System**: Light/Dark theme support with cross-page synchronization
 
 ## Features
 
@@ -12,14 +31,6 @@ A Chrome extension that automates task monitoring and acquisition on RaterHub pl
 - **Incomplete Task Detection**: Identifies and handles incomplete tasks
 - **Mouse Movement Detection**: Stops alarms when user activity is detected
 - **Theme Support**: Light/Dark theme with real-time synchronization
-
-## New Features in v1.5
-
-- **Desktop Notifications**: Browser notifications for task availability
-- **Mouse Movement Detection**: Automatically stops alarm sounds when mouse movement is detected
-- **Incomplete Tasks Handling**: Detects and handles incomplete tasks with popup notifications
-- **Enhanced Error Detection**: Improved 403 error detection and handling
-- **Theme System**: Light/Dark theme support with cross-page synchronization
 
 ## Installation
 
@@ -52,45 +63,47 @@ Access the settings page by right-clicking the extension icon and selecting "Opt
 - **Enhanced Error Detection**: Improved error detection
 - **Theme**: Light/Dark theme selection
 
-## Theme System
+## Real-time Synchronization System
 
-The extension now features a comprehensive theme system:
+The extension now features advanced real-time synchronization developed by Ahmed Tarek:
 
-- **Real-time Synchronization**: Theme changes sync instantly between all extension pages
-- **No Page Reloads**: Theme updates without requiring page refreshes
-- **Persistent Settings**: Theme preferences are saved across browser sessions
-- **Cross-Page Consistency**: Options page, popup, and content pages maintain theme consistency
+- **Instant Theme Updates**: Theme changes apply immediately across all components
+- **Individual Setting Sync**: Each setting update triggers targeted UI updates
+- **Cross-Component Communication**: Robust message passing between options page, popup, and background
+- **No Page Reloads**: All updates happen without requiring page refreshes
+- **Performance Optimized**: Efficient updates with minimal CPU usage
+- **Error Resilient**: Graceful handling of unavailable components
 
 ## Development
 
-The extension consists of several key components:
+The extension consists of several key components developed by Ahmed Tarek:
 
 - `manifest.json`: Extension configuration
 - `background.js`: Background script for core functionality and message routing
 - `content.js`: Content script injected into RaterHub pages
-- `popup.js`: Popup interface logic with theme support
-- `options.js`: Settings page logic with theme synchronization
+- `popup.js`: Popup interface logic with real-time synchronization
+- `options.js`: Settings page logic with instant updates
 - `styles.css`: Comprehensive styling with theme variables
-- `test_theme_sync.html`: Theme synchronization testing page
+- Test files for comprehensive validation
 
-### Theme Implementation Details:
-- Uses CSS custom properties for theme variables
-- Implements Chrome runtime messaging for real-time synchronization
-- Includes graceful error handling for closed pages
-- Features storage-based fallback synchronization
+### Technical Implementation:
+- Chrome runtime messaging for real-time communication
+- Storage change detection and broadcasting
+- Individual setting update handlers
+- CSS custom properties for theme management
+- Comprehensive error handling and logging
 
 ## Testing
 
-Use `test_theme_sync.html` to verify theme synchronization functionality:
-- Real-time theme updates between extension components
-- Storage persistence testing
-- Error handling verification
-- Cross-page synchronization validation
+Use the provided test files to verify functionality:
+- `test_sync_complete.html`: Comprehensive real-time synchronization testing
+- `test_theme_sync.html`: Theme synchronization validation
+- Automated test suites for all features
 
 ## License
 
-This project is for personal/educational use. Please ensure compliance with RaterHub's terms of service.
+This project is developed by Ahmed Tarek for personal/educational use. Please ensure compliance with RaterHub's terms of service.
 
 ## Disclaimer
 
-This extension is designed to assist with task monitoring but should be used responsibly. Always follow RaterHub's guidelines and terms of service.
+This extension is designed to assist with task monitoring but should be used responsibly. Always follow RaterHub's guidelines and terms of service. The developer (Ahmed Tarek) is not responsible for any misuse of this extension.

@@ -109,44 +109,51 @@
                 active
               </p>
             </div>
-          </div>
 
-          <div class="setting-card">
-            <div class="setting-header">
-              <h3 class="setting-title">Alert Sound</h3>
-            </div>
-            <div class="setting-content">
-              <div class="setting-item">
-                <label for="soundSourceSelect">Sound Source:</label>
-                <select id="soundSourceSelect" class="styled-select">
-                  <option value="default" selected>Default</option>
-                  <option value="file">Local file</option>
-                  <option value="url">Online audio link</option>
-                </select>
+            <div class="setting-card">
+              <div class="setting-header">
+                <h3 class="setting-title">Alert Sound</h3>
               </div>
-              
-              <div id="soundSourceControls">
-                <div id="fileInputContainer" class="setting-item" style="display: none;">
-                  <label for="alertSoundFile">Choose MP3 file:</label>
-                  <input type="file" id="alertSoundFile" accept="audio/mp3,audio/mpeg" class="styled-input" />
+              <div class="setting-content">
+                <div class="setting-item">
+                  <label for="soundSourceSelect">Sound Source:</label>
+                  <select id="soundSourceSelect" class="styled-select">
+                    <option value="default" selected>Default</option>
+                    <option value="file">Local file</option>
+                    <option value="url">Online audio link</option>
+                  </select>
                 </div>
                 
-                <div id="urlInputContainer" class="setting-item" style="display: none;">
-                  <label for="alertSoundUrl">MP3 URL:</label>
-                  <input type="text" id="alertSoundUrl" placeholder="Paste direct MP3 URL here (must end with .mp3)" class="styled-input" />
+                <div id="soundSourceControls">
+                  <div id="fileInputContainer" class="file-input-container" style="display: none;">
+                    <label for="alertSoundFile" class="file-input-label">Choose MP3 file:</label>
+                    <div class="file-input-wrapper">
+                      <input type="file" id="alertSoundFile" accept="audio/mp3,audio/mpeg" class="file-input" />
+                    </div>
+                  </div>
+                  
+                  <div id="urlInputContainer" class="url-input-container" style="display: none;">
+                    <label for="alertSoundUrl" class="url-input-label">MP3 URL:</label>
+                    <input type="text" id="alertSoundUrl" class="styled-select url-input" placeholder="Paste direct MP3 URL here (must end with .mp3)" pattern=".*\.mp3$" />
+                  </div>
                 </div>
+                
+                <div class="spacer-md"></div>
+                <div class="sound-controls">
+                  <button id="playPauseSoundBtn" class="btn btn-secondary" title="Play/Pause">
+                    <span id="playPauseIcon" class="sound-icon">&#9654;</span>
+                  </button>
+                  <button id="stopSoundBtn" class="btn btn-outline" title="Stop">
+                    <span class="sound-icon">&#9632;</span>
+                  </button>
+                </div>
+                
+                <div id="soundErrorMsg" class="error-message" style="display: none;"></div>
               </div>
-              
-              <div class="setting-item button-group">
-                <button id="saveAlertSoundBtn" class="btn btn-primary">Save Sound</button>
-                <button id="testAlertSoundBtn" class="btn btn-secondary">Test Sound</button>
-              </div>
-              
-              <div id="soundErrorMsg" class="error-message" style="display: none;"></div>
+              <p class="setting-description">
+                Configure custom alert sounds or use the default notification sound
+              </p>
             </div>
-            <p class="setting-description">
-              Configure custom alert sounds or use the default notification sound
-            </p>
           </div>
         </section>
 

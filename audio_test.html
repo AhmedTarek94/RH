@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Test - RHAT</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .play-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .stop-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .playing {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        .stopped {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Audio Play/Pause/Stop Test</h1>
+        
+        <div class="controls">
+            <button id="playPauseBtn" class="play-btn">▶ Play</button>
+            <button id="stopBtn" class="stop-btn">■ Stop</button>
+        </div>
+        
+        <div id="status" class="status stopped">
+            Status: Stopped
+        </div>
+        
+        <div>
+            <h3>Test Instructions:</h3>
+            <ol>
+                <li>Click "Play" to start the audio</li>
+                <li>Click "Play" again to pause (button should change to "⏸︎")</li>
+                <li>Click "Play" again to resume</li>
+                <li>Click "Stop" to completely stop and reset the audio</li>
+                <li>Test that the status updates correctly</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        let testAudio = null;
+        let isPlaying = false;
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const status = document.getElementById('status');
+
+        // Test audio file (using a simple beep sound)
+        const audioData = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAoUXrTp66hVFApGn+DxwG8gBzKL0/LMeSwFJHfH79uQQAo';
+
+        function updateStatus() {
+            if (isPlaying) {
+                status.textContent = 'Status: Playing';
+                status.className = 'status playing';
+                playPauseBtn.textContent = '⏸︎ Pause';
+            } else {
+                status.textContent = 'Status: Stopped';
+                status.className = 'status stopped';
+                playPauseBtn.textContent = '▶ Play';
+            }
+        }
+
+        playPauseBtn.addEventListener('click', () => {
+            if (!testAudio) {
+                // Create and play audio
+                testAudio = new Audio(audioData);
+                testAudio.volume = 0.5;
+                testAudio.play();
+                isPlaying = true;
+                testAudio.onended = () => {
+                    isPlaying = false;
+                    testAudio = null;
+                    updateStatus();
+                };
+            } else if (isPlaying) {
+                // Pause audio
+                testAudio.pause();
+                isPlaying = false;
+            } else {
+                // Resume audio
+                testAudio.play();
+                isPlaying = true;
+            }
+            updateStatus();
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (testAudio) {
+                testAudio.pause();
+                testAudio.currentTime = 0;
+                isPlaying = false;
+                testAudio = null;
+                updateStatus();
+            }
+        });
+
+        // Initial status update
+        updateStatus();
+    </script>
+</body>
+</html>
