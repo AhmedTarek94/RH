@@ -16,6 +16,7 @@
 
 ### `manifest.json`
 - **Manifest Version**: 3
+- **Current Version**: 1.8.1
 - **Permissions**: activeTab, tabs, storage, contextMenus, scripting
 - **Host Permissions**: https://www.raterhub.com/*
 - **Content Scripts**: Injected on RaterHub evaluation pages
@@ -55,6 +56,7 @@
   - Sound source configuration
   - Theme toggle with real-time sync
   - Options page link
+  - **Compact Mode**: Removed from popup (v1.8.1)
 
 ### Options Page
 **Files**: `options.html`, `options.js`
@@ -65,6 +67,7 @@
   - Sound testing functionality
   - Advanced settings management
   - Theme system with cross-page synchronization
+  - **Compact Mode**: Available only on options page (v1.8.1)
 
 ## Utilities & Assets
 
@@ -94,6 +97,7 @@
 - `PROJECT_INDEX.md` - This file (project overview)
 - `ENHANCED_UI_PLAN.md` - UI enhancement plans
 - `THEME_INTEGRATION_SUMMARY.md` - Theme system documentation
+- `COMPACT_DESIGN_PLAN.md` - Compact mode implementation plan
 
 ### Implementation Tracking
 - `TODO_SYNC_IMPLEMENTATION.md` - Theme synchronization progress
@@ -101,6 +105,12 @@
 - `SYNC_IMPLEMENTATION_SUMMARY.md` - Real-time sync implementation details
 - `SYNC_TEST_PLAN.md` - Synchronization testing procedures
 - `REAL_TIME_SYNC_COMPLETE.md` - Complete sync feature documentation
+- `TODO_COMPACT_MODE_FIX.md` - Compact mode fix tracking
+
+### Feature Implementation
+- `USER_GESTURE_HANDLER_IMPLEMENTATION.md` - User gesture handling
+- `FILTER_UI_IMPLEMENTATION_PLAN.md` - Filter UI implementation
+- `FILTER_IMPLEMENTATION_PROGRESS.md` - Filter implementation progress
 
 ## Testing
 
@@ -112,6 +122,14 @@
 - `test_theme_sync.html` - Theme synchronization testing
 - `test_sync_complete.html` - Complete synchronization test suite
 - `live_sync_test.html` - Live real-time synchronization testing
+- `test_content_integration.html` - Content script integration tests
+- `test_gesture_handler.html` - User gesture handler tests
+- `audio_gesture_test.html` - Audio gesture testing
+- `final_gesture_test.html` - Final gesture testing
+- `test_filters.html` - Filter functionality tests
+- `test_error_handling.html` - Error handling tests
+- `test_error_scenarios.js` - Error scenario testing
+- `test_tab_management.html` - Tab management tests
 
 ## Key Features
 
@@ -123,6 +141,7 @@
 5. **Context Menu**: Right-click access to controls
 6. **Settings Persistence**: Sync storage across devices
 7. **Theme System**: Light/Dark themes with real-time sync
+8. **Compact Mode**: Layout switching (options page only - v1.8.1)
 
 ### Monitoring Logic
 - Checks for "No tasks are currently available" message
@@ -135,6 +154,12 @@
 - No page reloads required for theme updates
 - Persistent theme preferences across sessions
 - Graceful error handling for closed pages
+
+### Compact Mode (v1.8.1)
+- Layout switching available only on options page
+- Popup maintains original style consistently
+- No impact on popup functionality
+- Clean separation between options and popup interfaces
 
 ## Technical Architecture
 
@@ -159,7 +184,7 @@
 
 ## Development Status
 
-### Current Version: 1.7.0
+### Current Version: 1.8.1
 - ✅ Core monitoring functionality
 - ✅ Audio alert system
 - ✅ Settings management
@@ -169,8 +194,15 @@
 - ✅ Individual setting updates without page reloads
 - ✅ Performance optimization
 - ✅ Complete testing framework
+- ✅ Compact mode fix (options page only)
 
-### Recent Improvements
+### Recent Improvements (v1.8.1)
+- **Compact Mode Fix**: Layout switch now available only on options page
+- **Popup Consistency**: Popup maintains original style regardless of compact mode
+- **Clean Separation**: Options and popup interfaces properly separated
+- **Version Update**: Bumped to 1.8.1 for compact mode fix
+
+### Previous Improvements
 - Audio playback reliability fixes
 - Dual storage strategy implementation
 - HTML structure cleanup
@@ -195,11 +227,11 @@
 ## File Structure
 ```
 RHAT_Extension/
-├── manifest.json                 # Extension configuration (v1.7.0)
+├── manifest.json                 # Extension configuration (v1.8.1)
 ├── background.js                 # Service worker
 ├── content.js                    # Page monitoring
-├── popup.html                    # Toolbar popup UI
-├── popup.js                      # Popup functionality
+├── popup.html                    # Toolbar popup UI (compact mode removed)
+├── popup.js                      # Popup functionality (compact mode removed)
 ├── options.html                  # Settings page
 ├── options.js                    # Options functionality
 ├── styles.css                    # Styling with themes
@@ -208,18 +240,26 @@ RHAT_Extension/
 │   ├── icon16.png
 │   ├── icon48.png
 │   └── icon128.png
+├── filters.js                    # Filter functionality
+├── validate_content.js           # Content validation
 ├── INSTALLATION_GUIDE.md         # Setup and testing instructions
 ├── REFACTOR_SUMMARY.md           # Recent refactoring changes
 ├── UPGRADES.md                   # Comprehensive feature roadmap
-├── MILESTONES.md                 # Progress tracking (v1.7.0)
-├── PROJECT_INDEX.md              # This file (updated for v1.7.0)
+├── MILESTONES.md                 # Progress tracking (v1.8.1)
+├── PROJECT_INDEX.md              # This file (updated for v1.8.1)
 ├── ENHANCED_UI_PLAN.md           # UI enhancement plans
 ├── THEME_INTEGRATION_SUMMARY.md  # Theme system documentation
+├── COMPACT_DESIGN_PLAN.md        # Compact mode implementation
 ├── TODO_SYNC_IMPLEMENTATION.md   # Theme synchronization progress
 ├── TEST_PLAN.md                  # Testing procedures
 ├── SYNC_IMPLEMENTATION_SUMMARY.md # Real-time sync implementation
 ├── SYNC_TEST_PLAN.md             # Synchronization testing procedures
 ├── REAL_TIME_SYNC_COMPLETE.md    # Complete sync feature documentation
+├── TODO_COMPACT_MODE_FIX.md      # Compact mode fix tracking
+├── USER_GESTURE_HANDLER_IMPLEMENTATION.md # User gesture handling
+├── FILTER_UI_IMPLEMENTATION_PLAN.md # Filter UI implementation
+├── FILTER_IMPLEMENTATION_PROGRESS.md # Filter implementation progress
+├── TAB_MANAGEMENT_COMPLETE.md    # Tab management completion
 ├── test_extension.html           # Extension functionality tests
 ├── test_file_storage.html        # Storage system tests
 ├── test_sync.html                # Synchronization tests
@@ -227,6 +267,14 @@ RHAT_Extension/
 ├── test_theme_sync.html          # Theme synchronization testing
 ├── test_sync_complete.html       # Complete synchronization test suite
 ├── live_sync_test.html           # Live real-time synchronization testing
+├── test_content_integration.html # Content script integration tests
+├── test_gesture_handler.html     # User gesture handler tests
+├── audio_gesture_test.html       # Audio gesture testing
+├── final_gesture_test.html       # Final gesture testing
+├── test_filters.html             # Filter functionality tests
+├── test_error_handling.html      # Error handling tests
+├── test_error_scenarios.js       # Error scenario testing
+├── test_tab_management.html      # Tab management tests
 └── audio_test.js                 # Audio testing utilities
 ```
 
@@ -248,6 +296,7 @@ RHAT_Extension/
 5. Test settings persistence
 6. Verify cross-device sync (if applicable)
 7. Test theme synchronization
+8. Verify compact mode functionality (options page only)
 
 ### Debugging Tips
 - Check Chrome extension console for errors
@@ -301,7 +350,17 @@ RHAT_Extension/
 
 ## Version History
 
-### v1.7.0 - Current
+### v1.8.1 - Current
+- **Compact Mode Fix**: Layout switch available only on options page
+- **Popup Consistency**: Popup maintains original style regardless of compact mode
+- **Clean Separation**: Proper separation between options and popup interfaces
+
+### v1.8.0
+- Initial compact mode implementation
+- UI layout switching functionality
+- Theme system enhancements
+
+### v1.7.0
 - Real-time synchronization across all extension components
 - Individual setting updates without page reloads
 - Enhanced cross-component communication
