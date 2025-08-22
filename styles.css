@@ -529,6 +529,17 @@ input:checked + .slider:before {
   background: var(--primary-light);
 }
 
+/* Dark theme specific adjustments for radio options */
+[data-theme="dark"] .radio-option:hover {
+  border-color: var(--primary-color);
+  background: rgba(79, 70, 229, 0.15);
+}
+
+[data-theme="dark"] .radio-option:has(input:checked) {
+  border-color: var(--primary-color);
+  background: rgba(79, 70, 229, 0.15);
+}
+
 .radio-custom {
   width: 20px;
   height: 20px;
