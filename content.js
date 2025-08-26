@@ -47,9 +47,6 @@ if (window.raterHubMonitorLoaded) {
     
     // Add mouse movement detection to stop alarm
     addMouseMovementDetection();
-    
-    // Add user gesture handler to initialize audio context
-    addUserGestureHandler();
   }
 
   function loadSettings() {
@@ -702,40 +699,64 @@ if (window.raterHubMonitorLoaded) {
     }
   }
 
-  function fallbackBeep() {
-    try {
-      // Create a simple beep using Web Audio API
-      // Check if AudioContext is suspended and needs to be resumed
-      let audioContext;
-      
-      if (window.raterHubAudioContext) {
-        audioContext = window.raterHubAudioContext;
-      } else {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        window.raterHubAudioContext = audioContext;
+  function stopAlarm() {
+    if (currentAudio) {
+      try {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio = null;
+        console.log("RaterHub Monitor: Alarm stopped");
+      } catch (error) {
+        console.error("RaterHub Monitor: Error stopping alarm:", error);
       }
-      
-      // If the context is suspended, try to resume it
-      if (audioContext.state === 'suspended') {
-        audioContext.resume().then(() => {
-          console.log("RaterHub Monitor: AudioContext resumed successfully");
-          playBeepSound(audioContext);
-        }).catch(error => {
-          console.error("RaterHub Monitor: Failed to resume AudioContext:", error);
-          // Fallback to HTML5 audio if Web Audio fails
-          playHtml5Beep();
-        });
-      } else {
-        playBeepSound(audioContext);
-      }
-    } catch (error) {
-      console.error("RaterHub Monitor: Fallback beep failed:", error);
-      playHtml5Beep();
     }
   }
 
-  function playBeepSound(audioContext) {
+  function addMouseMovementDetection() {
+    console.log("RaterHub Monitor: Adding mouse movement detection");
+    
+    let mouseMovementTimeout;
+    let lastMouseMoveTime = 0;
+    const MOUSE_MOVEMENT_DEBOUNCE = 1000; // 1 second debounce
+    
+    function handleMouseMovement() {
+      const currentTime = Date.now();
+      
+      // Debounce mouse movement events to prevent excessive stopping
+      if (currentTime - lastMouseMoveTime > MOUSE_MOVEMENT_DEBOUNCE) {
+        lastMouseMoveTime = currentTime;
+        
+        // Check if alarm is currently playing
+        if (currentAudio && !currentAudio.paused) {
+          console.log("RaterHub Monitor: Mouse movement detected - stopping alarm");
+          stopAlarm();
+        }
+      }
+      
+      // Clear any existing timeout and set a new one
+      if (mouseMovementTimeout) {
+        clearTimeout(mouseMovementTimeout);
+      }
+    }
+    
+    // Add mouse movement event listener
+    document.addEventListener('mousemove', handleMouseMovement);
+    
+    // Also add click event listener to stop alarm on any click
+    document.addEventListener('click', () => {
+      if (currentAudio && !currentAudio.paused) {
+        console.log("RaterHub Monitor: Click detected - stopping alarm");
+        stopAlarm();
+      }
+    });
+    
+    console.log("RaterHub Monitor: Mouse movement detection enabled");
+  }
+
+  function fallbackBeep() {
     try {
+      // Create a simple beep using Web Audio API
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -753,23 +774,7 @@ if (window.raterHubMonitorLoaded) {
 
       console.log("RaterHub Monitor: Fallback beep played");
     } catch (error) {
-      console.error("RaterHub Monitor: Error playing beep sound:", error);
-      playHtml5Beep();
-    }
-  }
-
-  function playHtml5Beep() {
-    try {
-      // Create a very simple HTML5 audio fallback
-      const beep = new Audio();
-      beep.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfJ79WQQAoUWrTp6qVTDwpHoOLwtmMcBjiR1/LMeSwFJHfJ79WQQAoUWrTp6qVTDwpHoOLwtmMcBjiR1/LMeSwFJHfJ79WQQAoUWrTp6qVTDw==';
-      beep.volume = 0.3;
-      beep.play().catch(error => {
-        console.error("RaterHub Monitor: HTML5 beep failed:", error);
-      });
-      console.log("RaterHub Monitor: HTML5 fallback beep played");
-    } catch (error) {
-      console.error("RaterHub Monitor: HTML5 beep creation failed:", error);
+      console.error("RaterHub Monitor: Fallback beep failed:", error);
     }
   }
 
@@ -1001,156 +1006,8 @@ if (window.raterHubMonitorLoaded) {
         ✅ Test successful! Acquire button simulated
       </div>
     `;
-
-    // Add CSS animation
-    const style = document.createElement("style");
-    style.textContent = `
-      @keyframes slideIn {
-        from {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-
+    
     // Add to page
     document.body.appendChild(message);
-
-    // Remove message after 3 seconds
-    setTimeout(() => {
-      if (message.parentNode) {
-        message.parentNode.removeChild(message);
-      }
-    }, 3000);
   }
-
-  function addMouseMovementDetection() {
-    let mouseMoveTimeout;
-    
-    document.addEventListener('mousemove', () => {
-      // Clear existing timeout
-      if (mouseMoveTimeout) {
-        clearTimeout(mouseMoveTimeout);
-      }
-      
-      // Stop alarm immediately on mouse movement
-      if (currentAudio) {
-        console.log("RaterHub Monitor: Mouse movement detected, stopping alarm");
-        stopAlarm();
-      }
-      
-      // Set a small delay to prevent constant stopping if mouse keeps moving
-      mouseMoveTimeout = setTimeout(() => {
-        // Reset after 100ms of no movement
-      }, 100);
-    });
-  }
-
-  function addUserGestureHandler() {
-    // Add a global click handler to initialize audio context on user interaction
-    document.addEventListener('click', function initializeAudioOnGesture() {
-      console.log("RaterHub Monitor: User gesture detected, initializing audio context if needed");
-      
-      // Check if we have an audio context that needs initialization
-      if (window.raterHubAudioContext && window.raterHubAudioContext.state === 'suspended') {
-        window.raterHubAudioContext.resume().then(() => {
-          console.log("RaterHub Monitor: AudioContext resumed successfully after user gesture");
-        }).catch(error => {
-          console.error("RaterHub Monitor: Failed to resume AudioContext after user gesture:", error);
-        });
-      }
-      
-      // Remove the event listener after first successful interaction
-      document.removeEventListener('click', initializeAudioOnGesture);
-    }, { once: true, capture: true });
-    
-    // Also listen for keypress events for broader gesture detection
-    document.addEventListener('keydown', function initializeAudioOnKeypress() {
-      console.log("RaterHub Monitor: Keypress detected, initializing audio context if needed");
-      
-      if (window.raterHubAudioContext && window.raterHubAudioContext.state === 'suspended') {
-        window.raterHubAudioContext.resume().then(() => {
-          console.log("RaterHub Monitor: AudioContext resumed successfully after keypress");
-        }).catch(error => {
-          console.error("RaterHub Monitor: Failed to resume AudioContext after keypress:", error);
-        });
-      }
-      
-      document.removeEventListener('keydown', initializeAudioOnKeypress);
-    }, { once: true, capture: true });
-  }
-
-  function stopAlarm() {
-    if (currentAudio) {
-      try {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
-        currentAudio = null;
-        console.log("RaterHub Monitor: Alarm stopped due to mouse movement");
-      } catch (error) {
-        console.error("RaterHub Monitor: Error stopping alarm:", error);
-        currentAudio = null;
-      }
-    }
-  }
-
-  // Handle page visibility changes
-  document.addEventListener("visibilitychange", () => {
-    if (
-      document.visibilityState === "visible" &&
-      currentSettings.enabled &&
-      !isMonitoring &&
-      !incompleteTasksDetected
-    ) {
-      // Restart monitoring when tab becomes visible (unless incomplete tasks are detected)
-      console.log("RaterHub Monitor: Tab became visible, reinitializing...");
-      setTimeout(() => {
-        initialize();
-      }, 1000);
-    }
-  });
-
-  // Clean up when page is about to unload
-  window.addEventListener("beforeunload", () => {
-    stopMonitoring();
-
-    // Clean up any existing popups
-    const existingPopup = document.getElementById("raterhub-monitor-popup");
-    if (existingPopup) {
-      existingPopup.remove();
-    }
-  });
-
-  // Listen for storage changes directly (in case background script messaging fails)
-  chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === "sync") {
-      console.log("RaterHub Monitor: Storage changed:", changes);
-      loadSettings();
-    }
-  });
-
-  // Store the last refresh time in session to persist across page reloads
-  window.addEventListener("load", () => {
-    // Try to get the last refresh time from sessionStorage equivalent
-    const urlParams = new URLSearchParams(window.location.search);
-    const lastRefreshParam = urlParams.get("raterhub_monitor_last_refresh");
-    if (lastRefreshParam) {
-      lastRefreshTime = parseInt(lastRefreshParam);
-      console.log("RaterHub Monitor: Recovered last refresh time:", new Date(lastRefreshTime).toLocaleTimeString());
-    }
-  });
-
-  // Before refreshing, add timestamp to URL to track refresh timing
-  const originalReload = location.reload;
-  location.reload = function () {
-    const currentTime = Date.now();
-    const url = new URL(window.location);
-    url.searchParams.set("raterhub_monitor_last_refresh", currentTime.toString());
-    window.location.href = url.toString();
-  };
-} // End of the multiple injection prevention block
+}

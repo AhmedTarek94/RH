@@ -2,6 +2,8 @@
 
 // Import filter management system
 importScripts('filters.js');
+// Import analytics system
+importScripts('analytics.js');
 
 // Initialize default settings
 chrome.runtime.onInstalled.addListener(() => {
@@ -42,6 +44,9 @@ chrome.runtime.onInstalled.addListener(() => {
   
   // Initialize filter manager with default settings
   filterManager.loadFilters();
+  
+  // Initialize analytics system
+  analyticsManager.initialize();
 });
 
 chrome.runtime.onStartup.addListener(() => {
@@ -50,6 +55,9 @@ chrome.runtime.onStartup.addListener(() => {
   
   // Start periodic tab scanning for 403 errors
   startTabScanner();
+  
+  // Initialize analytics system on startup
+  analyticsManager.initialize();
 });
 
 function inspectOpenTabsForTargetUrls() {
@@ -353,8 +361,99 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
+  // Handle analytics-related messages
+  if (message.action === "analyticsEvent") {
+    handleAnalyticsEvent(message.eventType, message.eventData, sender);
+    return true;
+  }
+  
+  // Handle analytics data requests
+  if (message.action === "getAnalyticsData") {
+    handleAnalyticsDataRequest(message, sendResponse);
+    return true; // Keep message channel open for async response
+  }
+  
+  // Handle analytics export requests
+  if (message.action === "exportAnalyticsData") {
+    handleAnalyticsExportRequest(message, sendResponse);
+    return true; // Keep message channel open for async response
+  }
+  
   return false;
 });
+
+// Handle analytics events from content scripts and other components
+function handleAnalyticsEvent(eventType, eventData, sender) {
+  if (!analyticsManager.isInitialized) {
+    console.log('Analytics system not initialized, skipping event:', eventType);
+    return;
+  }
+  
+  switch (eventType) {
+    case 'task_found':
+      analyticsManager.trackTaskFound(eventData);
+      break;
+    case 'task_acquired':
+      analyticsManager.trackTaskAcquired(eventData);
+      break;
+    case 'task_completed':
+      analyticsManager.trackTaskCompleted(eventData);
+      break;
+    case 'task_failed':
+      analyticsManager.trackTaskFailed(eventData.errorData, eventData.errorType);
+      break;
+    case 'monitoring_state':
+      analyticsManager.trackMonitoringState(eventData.enabled, eventData.reason);
+      break;
+    default:
+      console.log('Unknown analytics event type:', eventType);
+  }
+}
+
+// Handle analytics data requests
+async function handleAnalyticsDataRequest(message, sendResponse) {
+  try {
+    const { timeframe, summaryType } = message;
+    
+    if (summaryType === 'overview') {
+      const summary = await analyticsManager.getSummary(timeframe);
+      sendResponse({ success: true, data: summary });
+    } else if (summaryType === 'rawEvents') {
+      const events = await analyticsManager.getEvents(timeframe);
+      sendResponse({ success: true, data: events });
+    } else if (summaryType === 'sessions') {
+      const sessions = await analyticsManager.getSessions(timeframe);
+      sendResponse({ success: true, data: sessions });
+    } else {
+      sendResponse({ success: false, error: 'Unknown summary type' });
+    }
+  } catch (error) {
+    console.error('Error handling analytics data request:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+// Handle analytics export requests
+async function handleAnalyticsExportRequest(message, sendResponse) {
+  try {
+    const { timeframe, format } = message;
+    
+    let exportData;
+    if (format === 'csv') {
+      exportData = await analyticsManager.exportToCSV(timeframe);
+    } else if (format === 'json') {
+      exportData = await analyticsManager.exportToJSON(timeframe);
+    } else {
+      sendResponse({ success: false, error: 'Unsupported export format' });
+      return;
+    }
+    
+    sendResponse({ success: true, data: exportData, format: format });
+  } catch (error) {
+    console.error('Error handling analytics export request:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
 
 // Listen for storage changes to broadcast to all extension components
 chrome.storage.onChanged.addListener((changes, namespace) => {

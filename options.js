@@ -1,6 +1,8 @@
 // Options page script for RaterHub Task Monitor
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    // Initialize analytics manager
+    await analyticsManager.initialize();
   const enabledToggle = document.getElementById("enabledToggle");
   const alarmOnlyMode = document.getElementById("alarmOnlyMode");
   const alarmAndClickMode = document.getElementById("alarmAndClickMode");
@@ -128,8 +130,8 @@ document.addEventListener("DOMContentLoaded", () => {
       themeToggle.checked = data.darkThemeEnabled || false;
       updateThemeStatus(data.darkThemeEnabled || false);
       
-  // Update filter settings
-  updateFilterSettings(data);
+      // Update filter settings
+      updateFilterSettings(data);
       
       // Update sound source section visibility
       updateSoundSourceSection();
@@ -161,7 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateIntervalButtons(selectedInterval) {
     intervalButtons.forEach((btn) => {
       btn.classList.remove("active");
-      if (parseInt(btn.dataset.value) === selectedInterval) {
+      if (parseFloat(btn.dataset.value) === selectedInterval) {
         btn.classList.add("active");
       }
     });
@@ -189,6 +191,15 @@ document.addEventListener("DOMContentLoaded", () => {
       updateStatus(enabled);
       showSaveStatus();
       notifyContentScript();
+      
+      // Notify popup about the specific setting change
+      chrome.runtime.sendMessage({ 
+        action: "settingChanged", 
+        setting: "enabled", 
+        value: enabled 
+      }).catch(() => {
+        // Ignore errors if popup is not open
+      });
     });
   }
 
@@ -197,6 +208,15 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.sync.set({ mode }, () => {
       showSaveStatus();
       notifyContentScript();
+      
+      // Notify popup about the specific setting change
+      chrome.runtime.sendMessage({ 
+        action: "settingChanged", 
+        setting: "mode", 
+        value: mode 
+      }).catch(() => {
+        // Ignore errors if popup is not open
+      });
     });
   }
 
@@ -213,12 +233,21 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function handleIntervalChange(event) {
-    const interval = parseInt(event.target.dataset.value);
+    const interval = parseFloat(event.target.dataset.value);
     updateIntervalButtons(interval);
 
     chrome.storage.sync.set({ refreshInterval: interval }, () => {
       showSaveStatus();
       notifyContentScript();
+      
+      // Notify popup about the specific setting change
+      chrome.runtime.sendMessage({ 
+        action: "settingChanged", 
+        setting: "refreshInterval", 
+        value: interval 
+      }).catch(() => {
+        // Ignore errors if popup is not open
+      });
     });
   }
 
@@ -275,7 +304,6 @@ document.addEventListener("DOMContentLoaded", () => {
       notifyContentScript();
     });
   }
-
 
   // Play/Pause alert sound
   function handlePlayPauseSound() {
@@ -669,7 +697,7 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.sync.set({ 
       timeRangeStart: startTime, 
       timeRangeEnd: endTime 
-    }, () => {
+      }, () => {
       showSaveStatus();
       notifyContentScript();
     });
@@ -838,39 +866,288 @@ document.addEventListener("DOMContentLoaded", () => {
     updateFilteringStatus(data.filteringEnabled || false);
   });
 
-  // Compact mode functionality
-  const compactModeToggle = document.getElementById('compactModeToggle');
+  // Analytics functionality
+  initializeAnalytics();
 
-  function setupCompactModeToggle() {
-    compactModeToggle.addEventListener('click', () => {
-      const isCompact = document.body.classList.toggle('compact-mode');
-      compactModeToggle.classList.toggle('compact', isCompact);
-      chrome.storage.sync.set({ compactMode: isCompact });
-      
-      // Update button text based on mode
-      compactModeToggle.innerHTML = isCompact ? '📋' : '📱';
-      compactModeToggle.title = isCompact ? 'Switch to regular view' : 'Switch to compact view';
-    });
-  }
-
-  function loadCompactMode() {
-    chrome.storage.sync.get(['compactMode'], (data) => {
-      const isCompact = data.compactMode || false;
-      if (isCompact) {
-        document.body.classList.add('compact-mode');
-        compactModeToggle.classList.add('compact');
-        compactModeToggle.innerHTML = '📋';
-        compactModeToggle.title = 'Switch to regular view';
-      } else {
-        document.body.classList.remove('compact-mode');
-        compactModeToggle.classList.remove('compact');
-        compactModeToggle.innerHTML = '📱';
-        compactModeToggle.title = 'Switch to compact view';
-      }
-    });
-  }
-
-  // Setup and load compact mode
-  setupCompactModeToggle();
-  loadCompactMode();
 });
+
+// Analytics functions
+function initializeAnalytics() {
+  // Get analytics elements
+  const analyticsTimeframe = document.getElementById("analyticsTimeframe");
+  const refreshAnalyticsBtn = document.getElementById("refreshAnalyticsBtn");
+  const exportCSVBtn = document.getElementById("exportCSVBtn");
+  const exportJSONBtn = document.getElementById("exportJSONBtn");
+  const clearAnalyticsBtn = document.getElementById("clearAnalyticsBtn");
+  const exportAllBtn = document.getElementById("exportAllBtn");
+  const dataRetentionSelect = document.getElementById("dataRetentionSelect");
+  const performanceTrackingToggle = document.getElementById("performanceTrackingToggle");
+  const autoExportToggle = document.getElementById("autoExportToggle");
+
+  // Add event listeners
+  if (analyticsTimeframe) {
+    analyticsTimeframe.addEventListener("change", loadAnalyticsData);
+  }
+  if (refreshAnalyticsBtn) {
+    refreshAnalyticsBtn.addEventListener("click", loadAnalyticsData);
+  }
+  if (exportCSVBtn) {
+    exportCSVBtn.addEventListener("click", handleExportCSV);
+  }
+  if (exportJSONBtn) {
+    exportJSONBtn.addEventListener("click", handleExportJSON);
+  }
+  if (clearAnalyticsBtn) {
+    clearAnalyticsBtn.addEventListener("click", handleClearAnalytics);
+  }
+  if (exportAllBtn) {
+    exportAllBtn.addEventListener("click", handleExportAll);
+  }
+  if (dataRetentionSelect) {
+    dataRetentionSelect.addEventListener("change", handleDataRetentionChange);
+  }
+  if (performanceTrackingToggle) {
+    performanceTrackingToggle.addEventListener("change", handlePerformanceTrackingChange);
+  }
+  if (autoExportToggle) {
+    autoExportToggle.addEventListener("change", handleAutoExportChange);
+  }
+
+  // Load analytics data on tab activation
+  const analyticsTabBtn = document.querySelector('[data-tab="analytics"]');
+  if (analyticsTabBtn) {
+    analyticsTabBtn.addEventListener("click", loadAnalyticsData);
+  }
+
+  // Load initial analytics data
+  loadAnalyticsData();
+}
+
+async function loadAnalyticsData() {
+  const timeframe = document.getElementById("analyticsTimeframe")?.value || "30d";
+  
+  try {
+    showAnalyticsLoading(true);
+    const summary = await analyticsManager.getSummary(timeframe);
+    updateAnalyticsUI(summary);
+  } catch (error) {
+    console.error("Error loading analytics data:", error);
+    showAnalyticsError();
+  } finally {
+    showAnalyticsLoading(false);
+  }
+}
+
+function updateAnalyticsUI(summary) {
+  // Update overview metrics
+  document.getElementById("totalTasksFound").textContent = summary.totalTasks.toLocaleString();
+  document.getElementById("tasksAcquired").textContent = summary.acquired.toLocaleString();
+  document.getElementById("tasksCompleted").textContent = summary.completed.toLocaleString();
+  document.getElementById("successRate").textContent = `${summary.successRate}%`;
+
+  // Update earnings metrics
+  document.getElementById("totalEarnings").textContent = `$${summary.estimatedEarnings.total.toFixed(2)}`;
+  document.getElementById("earningsPerHour").textContent = `$${summary.estimatedEarnings.perHour.toFixed(2)}`;
+  document.getElementById("avgPerTask").textContent = `$${summary.estimatedEarnings.perTask.toFixed(2)}`;
+
+  // Update monitoring metrics
+  document.getElementById("totalMonitoringTime").textContent = formatTime(summary.totalMonitoringTime);
+  document.getElementById("avgSessionLength").textContent = formatMinutes(summary.averageSessionLength);
+  document.getElementById("acquisitionRate").textContent = `${summary.acquisitionRate}%`;
+
+  // Update performance metrics
+  document.getElementById("avgCpuUsage").textContent = `${summary.performance.averageCpu}%`;
+  document.getElementById("peakMemoryUsage").textContent = `${summary.performance.peakMemory} MB`;
+  document.getElementById("avgWaitTime").textContent = `${summary.averageWaitTime}s`;
+
+  // Update task type breakdown
+  updateTaskTypeBreakdown(summary.taskBreakdown);
+
+  // Update hourly patterns
+  updateHourlyPatterns(summary.hourlyPatterns);
+
+  // Update session history
+  updateSessionHistory();
+}
+
+function updateTaskTypeBreakdown(breakdown) {
+  const container = document.getElementById("taskTypeBreakdown");
+  if (!container) return;
+
+  if (Object.keys(breakdown).length === 0) {
+    container.innerHTML = '<div class="breakdown-placeholder">No task data available</div>';
+    return;
+  }
+
+  let html = '<div class="breakdown-grid">';
+  for (const [type, stats] of Object.entries(breakdown)) {
+    const successRate = stats.found > 0 ? Math.round((stats.completed / stats.found) * 100) : 0;
+    html += `
+      <div class="breakdown-item">
+        <div class="breakdown-header">
+          <span class="breakdown-type">${type}</span>
+          <span class="breakdown-count">${stats.found} total</span>
+        </div>
+        <div class="breakdown-stats">
+          <div class="breakdown-stat">
+            <span class="stat-label">Acquired:</span>
+            <span class="stat-value">${stats.acquired}</span>
+          </div>
+          <div class="breakdown-stat">
+            <span class="stat-label">Completed:</span>
+            <span class="stat-value">${stats.completed}</span>
+          </div>
+          <div class="breakdown-stat">
+            <span class="stat-label">Success:</span>
+            <span class="stat-value">${successRate}%</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function updateHourlyPatterns(patterns) {
+  const container = document.getElementById("hourlyPatterns");
+  if (!container) return;
+
+  if (Object.keys(patterns).length === 0) {
+    container.innerHTML = '<div class="patterns-placeholder">No hourly data available</div>';
+    return;
+  }
+
+  let html = '<div class="hourly-chart">';
+  const maxTasks = Math.max(...Object.values(patterns).map(p => p.tasksFound));
+  
+  for (let hour = 0; hour < 24; hour++) {
+    const hourData = patterns[hour] || { tasksFound: 0, tasksAcquired: 0, tasksCompleted: 0 };
+    const height = maxTasks > 0 ? (hourData.tasksFound / maxTasks) * 100 : 0;
+    
+    html += `
+      <div class="hourly-bar-container">
+        <div class="hourly-bar" style="height: ${height}%"></div>
+        <div class="hourly-label">${hour.toString().padStart(2, '0')}:00</div>
+        <div class="hourly-tooltip">
+          ${hourData.tasksFound} found<br>
+          ${hourData.tasksAcquired} acquired<br>
+          ${hourData.tasksCompleted} completed
+        </div>
+      </div>
+    `;
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function updateSessionHistory() {
+  const container = document.getElementById("sessionHistory");
+  if (!container) return;
+
+  // This would be implemented to show recent sessions
+  container.innerHTML = '<div class="session-placeholder">Session history coming soon</div>';
+}
+
+function showAnalyticsLoading(show) {
+  const analyticsGrid = document.querySelector('.analytics-grid');
+  if (analyticsGrid) {
+    if (show) {
+      analyticsGrid.classList.add('loading');
+    } else {
+      analyticsGrid.classList.remove('loading');
+    }
+  }
+}
+
+function showAnalyticsError() {
+  const analyticsGrid = document.querySelector('.analytics-grid');
+  if (analyticsGrid) {
+    analyticsGrid.innerHTML = '<div class="analytics-error">Error loading analytics data</div>';
+  }
+}
+
+function formatTime(minutes) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours}h ${mins}m`;
+}
+
+function formatMinutes(minutes) {
+  return `${Math.round(minutes)}m`;
+}
+
+async function handleExportCSV() {
+  const timeframe = document.getElementById("analyticsTimeframe")?.value || "30d";
+  try {
+    const csvData = await analyticsManager.exportToCSV(timeframe);
+    downloadFile(csvData, `rhat-analytics-${timeframe}.csv`, 'text/csv');
+  } catch (error) {
+    console.error("Error exporting CSV:", error);
+    alert("Error exporting CSV data");
+  }
+}
+
+async function handleExportJSON() {
+  const timeframe = document.getElementById("analyticsTimeframe")?.value || "30d";
+  try {
+    const jsonData = await analyticsManager.exportToJSON(timeframe);
+    downloadFile(jsonData, `rhat-analytics-${timeframe}.json`, 'application/json');
+  } catch (error) {
+    console.error("Error exporting JSON:", error);
+    alert("Error exporting JSON data");
+  }
+}
+
+async function handleExportAll() {
+  try {
+    const jsonData = await analyticsManager.exportToJSON('all');
+    downloadFile(jsonData, 'rhat-analytics-all-data.json', 'application/json');
+  } catch (error) {
+    console.error("Error exporting all data:", error);
+    alert("Error exporting all analytics data");
+  }
+}
+
+async function handleClearAnalytics() {
+  if (confirm("Are you sure you want to clear all analytics data? This cannot be undone.")) {
+    try {
+      await analyticsManager.clearData();
+      loadAnalyticsData();
+      alert("Analytics data cleared successfully");
+    } catch (error) {
+      console.error("Error clearing analytics data:", error);
+      alert("Error clearing analytics data");
+    }
+  }
+}
+
+function handleDataRetentionChange() {
+  const days = parseInt(document.getElementById("dataRetentionSelect").value);
+  analyticsManager.settings.dataRetentionDays = days;
+  analyticsManager.saveSettings();
+}
+
+function handlePerformanceTrackingChange() {
+  const enabled = document.getElementById("performanceTrackingToggle").checked;
+  analyticsManager.settings.trackPerformance = enabled;
+  analyticsManager.saveSettings();
+}
+
+function handleAutoExportChange() {
+  const enabled = document.getElementById("autoExportToggle").checked;
+  analyticsManager.settings.autoExport = enabled;
+  analyticsManager.saveSettings();
+}
+
+function downloadFile(content, filename, contentType) {
+  const blob = new Blob([content], { type: contentType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}

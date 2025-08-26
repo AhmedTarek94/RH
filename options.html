@@ -7,11 +7,6 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="options">
-    <!-- Compact Mode Toggle Button -->
-    <button id="compactModeToggle" class="compact-toggle-btn" title="Toggle compact view">
-      📱
-    </button>
-    
     <div class="options-container">
       <header class="options-header">
         <div class="header-content">
@@ -28,16 +23,20 @@
       <main class="options-main">
         <!-- Tab Navigation -->
         <div class="tabs-container">
-          <div class="tabs">
-            <button class="tab-btn active" data-tab="main-settings">
-              <span class="tab-icon">⚙️</span>
-              Main Settings
-            </button>
-            <button class="tab-btn" data-tab="filtering">
-              <span class="tab-icon">🎯</span>
-              Filtering
-            </button>
-          </div>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="main-settings">
+            <span class="tab-icon">⚙️</span>
+            Main Settings
+          </button>
+          <button class="tab-btn" data-tab="filtering">
+            <span class="tab-icon">🎯</span>
+            Filtering
+          </button>
+          <button class="tab-btn" data-tab="analytics">
+            <span class="tab-icon">📊</span>
+            Analytics
+          </button>
+        </div>
         </div>
 
         <!-- Main Settings Tab -->
@@ -112,6 +111,7 @@
                   <h3 class="setting-title">Refresh Interval</h3>
                   <div class="interval-selector">
                     <div class="interval-options">
+                      <button class="interval-btn" data-value="0.5">0.5s</button>
                       <button class="interval-btn active" data-value="1">1s</button>
                       <button class="interval-btn" data-value="2">2s</button>
                       <button class="interval-btn" data-value="5">5s</button>
@@ -479,6 +479,231 @@
           </section>
         </div>
 
+        <!-- Analytics Tab -->
+        <div id="analytics" class="tab-content">
+          <section class="settings-section">
+            <div class="section-header">
+              <h2 class="section-title">Task Analytics Dashboard</h2>
+              <p class="section-description">
+                Track your task performance, earnings, and monitoring efficiency
+              </p>
+            </div>
+
+            <div class="analytics-controls">
+              <div class="timeframe-selector">
+                <label for="analyticsTimeframe">Timeframe:</label>
+                <select id="analyticsTimeframe" class="styled-select">
+                  <option value="7d">Last 7 days</option>
+                  <option value="30d" selected>Last 30 days</option>
+                  <option value="90d">Last 90 days</option>
+                  <option value="all">All time</option>
+                </select>
+              </div>
+              <div class="export-buttons">
+                <button id="exportCSVBtn" class="btn btn-secondary">Export CSV</button>
+                <button id="exportJSONBtn" class="btn btn-outline">Export JSON</button>
+                <button id="refreshAnalyticsBtn" class="btn btn-outline">Refresh</button>
+              </div>
+            </div>
+
+            <div class="analytics-grid">
+              <!-- Overview Cards -->
+              <div class="analytics-card">
+                <div class="analytics-card-header">
+                  <h3 class="analytics-card-title">Task Overview</h3>
+                  <span class="analytics-card-icon">📈</span>
+                </div>
+                <div class="analytics-card-content">
+                  <div class="metric-row">
+                    <span class="metric-label">Total Tasks Found:</span>
+                    <span class="metric-value" id="totalTasksFound">0</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Tasks Acquired:</span>
+                    <span class="metric-value" id="tasksAcquired">0</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Tasks Completed:</span>
+                    <span class="metric-value" id="tasksCompleted">0</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Success Rate:</span>
+                    <span class="metric-value" id="successRate">0%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="analytics-card">
+                <div class="analytics-card-header">
+                  <h3 class="analytics-card-title">Earnings</h3>
+                  <span class="analytics-card-icon">💰</span>
+                </div>
+                <div class="analytics-card-content">
+                  <div class="metric-row">
+                    <span class="metric-label">Total Earnings:</span>
+                    <span class="metric-value" id="totalEarnings">$0.00</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Earnings/Hour:</span>
+                    <span class="metric-value" id="earningsPerHour">$0.00</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Avg per Task:</span>
+                    <span class="metric-value" id="avgPerTask">$0.00</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="analytics-card">
+                <div class="analytics-card-header">
+                  <h3 class="analytics-card-title">Monitoring</h3>
+                  <span class="analytics-card-icon">⏱️</span>
+                </div>
+                <div class="analytics-card-content">
+                  <div class="metric-row">
+                    <span class="metric-label">Total Monitoring:</span>
+                    <span class="metric-value" id="totalMonitoringTime">0h 0m</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Avg Session:</span>
+                    <span class="metric-value" id="avgSessionLength">0m</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Acquisition Rate:</span>
+                    <span class="metric-value" id="acquisitionRate">0%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="analytics-card">
+                <div class="analytics-card-header">
+                  <h3 class="analytics-card-title">Performance</h3>
+                  <span class="analytics-card-icon">⚡</span>
+                </div>
+                <div class="analytics-card-content">
+                  <div class="metric-row">
+                    <span class="metric-label">Avg CPU Usage:</span>
+                    <span class="metric-value" id="avgCpuUsage">0%</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Peak Memory:</span>
+                    <span class="metric-value" id="peakMemoryUsage">0 MB</span>
+                  </div>
+                  <div class="metric-row">
+                    <span class="metric-label">Avg Wait Time:</span>
+                    <span class="metric-value" id="avgWaitTime">0s</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Task Type Breakdown -->
+              <div class="analytics-card full-width">
+                <div class="analytics-card-header">
+                  <h3 class="analytics-card-title">Task Type Breakdown</h3>
+                  <span class="analytics-card-icon">📋</span>
+                </div>
+                <div class="analytics-card-content">
+                  <div id="taskTypeBreakdown" class="breakdown-container">
+                    <div class="breakdown-placeholder">No task data available</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Hourly Patterns -->
+              <div class="analytics-card full-width">
+                <div class="analytics-card-header">
+                  <h3 class="analytics-card-title">Hourly Patterns</h3>
+                  <span class="analytics-card-icon">🕒</span>
+                </div>
+                <div class="analytics-card-content">
+                  <div id="hourlyPatterns" class="patterns-container">
+                    <div class="patterns-placeholder">No hourly data available</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Session History -->
+              <div class="analytics-card full-width">
+                <div class="analytics-card-header">
+                  <h3 class="analytics-card-title">Recent Sessions</h3>
+                  <span class="analytics-card-icon">📅</span>
+                </div>
+                <div class="analytics-card-content">
+                  <div id="sessionHistory" class="session-container">
+                    <div class="session-placeholder">No session data available</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div class="section-header">
+              <h2 class="section-title">Analytics Settings</h2>
+              <p class="section-description">
+                Configure data retention and analytics preferences
+              </p>
+            </div>
+
+            <div class="settings-grid">
+              <div class="setting-card">
+                <div class="setting-header">
+                  <h3 class="setting-title">Data Retention</h3>
+                  <select id="dataRetentionSelect" class="styled-select">
+                    <option value="30">30 days</option>
+                    <option value="60">60 days</option>
+                    <option value="90" selected>90 days</option>
+                    <option value="365">1 year</option>
+                    <option value="0">Keep forever</option>
+                  </select>
+                </div>
+                <p class="setting-description">
+                  Automatically delete analytics data older than selected period
+                </p>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-header">
+                  <h3 class="setting-title">Performance Tracking</h3>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="performanceTrackingToggle" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <p class="setting-description">
+                  Track CPU and memory usage for performance monitoring
+                </p>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-header">
+                  <h3 class="setting-title">Auto Export</h3>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="autoExportToggle" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <p class="setting-description">
+                  Automatically export analytics data weekly
+                </p>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-header">
+                  <h3 class="setting-title">Data Management</h3>
+                </div>
+                <div class="setting-content">
+                  <button id="clearAnalyticsBtn" class="btn btn-outline">Clear All Data</button>
+                  <button id="exportAllBtn" class="btn btn-secondary">Export All Data</button>
+                </div>
+                <p class="setting-description">
+                  Manage your analytics data storage and exports
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+
         <section class="info-section">
           <div class="info-card">
             <h3 class="info-title">🚀 How it works</h3>
@@ -545,6 +770,7 @@
       </footer>
     </div>
 
+    <script src="analytics.js"></script>
     <script src="options.js"></script>
   </body>
 </html>

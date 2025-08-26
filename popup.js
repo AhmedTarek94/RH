@@ -53,6 +53,11 @@ document.addEventListener("DOMContentLoaded", () => {
         "darkThemeEnabled",
       ],
       (data) => {
+        console.log("Data retrieved from storage:", data); // Log the retrieved data
+        if (chrome.runtime.lastError) {
+            console.error("Error accessing storage:", chrome.runtime.lastError);
+            return;
+        }
         let interval = data.refreshInterval;
         let soundSource = data.alertSoundType;
         if (typeof interval === "string") interval = parseFloat(interval);
@@ -111,6 +116,15 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.sync.set({ enabled }, () => {
       updateStatus(enabled);
       notifyContentScript();
+      
+      // Notify options page about the specific setting change
+      chrome.runtime.sendMessage({ 
+        action: "settingChanged", 
+        setting: "enabled", 
+        value: enabled 
+      }).catch(() => {
+        // Ignore errors if options page is not open
+      });
     });
   }
 
