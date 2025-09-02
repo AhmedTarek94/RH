@@ -1,72 +1,55 @@
-# RaterHub Task Monitor - Fixes and Improvements
+# Remove Filtering and Analytics from RHAT Extension
 
-## Current Issues Identified:
-1. ✅ Chinese text corruption in content.js
-2. ✅ Placeholder implementations in filters.js
-3. ✅ Placeholder implementations in analytics.js
-4. ✅ Error handling improvements
-5. ✅ Task data extraction implementation
-6. ⬜ Testing and validation
+## Completed Tasks ✅
+- [x] Create comprehensive removal plan
+- [x] Get user approval for full removal
 
-## Fix Plan:
+## Pending Tasks 📋
 
-### Phase 1: Content.js Cleanup
-- [x] Remove Chinese text corruption ("极速赛车开奖直播记录查询")
-- [x] Fix syntax errors and incomplete code
-- [x] Ensure proper error handling
-- [x] Verify function implementations
-- [x] Implement missing stopAlarm() function
-- [x] Implement missing addMouseMovementDetection() function
+### 1. Remove Analytics and Filter Files
+- [x] Delete analytics.js file
+- [x] Delete filters.js file
 
-### Phase 2: Filters.js Implementation
-- [x] Implement extractTaskType() function
-- [x] Implement extractTaskDuration() function  
-- [x] Implement extractTaskReward() function
-- [x] Implement evaluateCustomRule() function
-- [x] Add proper error handling
+### 2. Update background.js
+- [ ] Remove importScripts('filters.js')
+- [ ] Remove importScripts('analytics.js')
+- [ ] Remove filterManager initialization
+- [ ] Remove analyticsManager initialization
+- [ ] Remove filter-related default settings
+- [ ] Remove analytics event handlers
+- [ ] Remove analytics data request handlers
+- [ ] Remove analytics export request handlers
 
-### Phase 3: Analytics.js Implementation
-- [x] Implement extractTaskInfo() function
-- [x] Implement calculateCompletionTime() function
-- [x] Implement getMemoryUsage() function
-- [x] Implement getCpuUsage() function
-- [x] Add proper error handling
+### 3. Update options.js
+- [ ] Remove analytics initialization
+- [ ] Remove all filter UI elements and event handlers
+- [ ] Remove all analytics UI elements and event handlers
+- [ ] Remove filter-related storage keys from loadSettings
+- [ ] Remove analytics-related storage keys from loadSettings
+- [ ] Remove filter management functions
+- [ ] Remove analytics management functions
+- [ ] Remove filter preset functionality
+- [ ] Remove analytics export functionality
 
-### Phase 4: Testing and Validation
-- [ ] Test on RaterHub pages
-- [ ] Verify audio functionality
-- [ ] Test filtering system
-- [ ] Validate analytics collection
-- [ ] Cross-browser testing
+### 4. Update popup.js
+- [ ] Remove any analytics references (if any)
 
-## Progress Tracking:
-- Started: Fixing content.js corruption issues
-- Completed: Implemented missing stopAlarm() and addMouseMovementDetection() functions
-- Completed: Implemented task data extraction in filters.js (extractTaskType, extractTaskDuration, extractTaskReward, evaluateCustomRule)
-- Completed: Implemented analytics data extraction in analytics.js (extractTaskInfo)
-- Next: Testing and validation phase
+### 5. Update content.js
+- [ ] Remove filter checks (already partially done)
+- [ ] Remove any remaining analytics calls
 
-## Implementation Details:
+### 6. Clean up Storage Keys
+- [ ] Remove analyticsSettings from storage
+- [ ] Remove analyticsEvents from storage
+- [ ] Remove analyticsSessions from storage
+- [ ] Remove filters from storage
+- [ ] Remove filterPresets from storage
+- [ ] Remove filteringEnabled from storage
 
-### Filters.js Updates:
-- **extractTaskReward()**: Now supports multiple reward formats ($0.15, 15¢, 0.15 USD) with fallback estimates based on task type
-- **evaluateCustomRule()**: Supports various operators (equals, not_equals, contains, greater_than, less_than, etc.)
-- **extractTaskType()**: Improved task type detection from DOM elements and URLs
-- **extractTaskDuration()**: Enhanced duration parsing with fallback estimates
+### 7. Update Manifest (if needed)
+- [ ] Check if any changes needed to manifest.json
 
-### Analytics.js Updates:
-- **extractTaskInfo()**: Comprehensive task information extraction using the same methods as filters.js
-- Added helper methods: extractTaskType(), extractTaskDuration(), extractTaskReward()
-- Task complexity is automatically determined based on task type
-
-### Error Handling:
-- All methods include proper try-catch blocks with fallback values
-- Console error logging for debugging
-- Graceful degradation when data extraction fails
-
-## Next Steps:
-- Test the implementation on actual RaterHub pages
-- Verify that task filtering works correctly
-- Validate analytics data collection
-- Test audio alerts and notifications
-- Perform cross-browser compatibility testing
+### 8. Testing
+- [ ] Test extension loads without errors
+- [ ] Test basic monitoring functionality still works
+- [ ] Verify no console errors related to missing analytics/filters

@@ -1,0 +1,53 @@
+/* CSS for item layout */
+.g { /* Kill the margin given by style-google.css */
+  margin-top: 0;
+  margin-bottom: 0;
+}
+li { /* Move the margin to the li */
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+/* CSS for table layout */
+table.table-layout td {
+  text-align: center;
+  vertical-align: bottom;
+  border: none;
+  padding: 2px;
+}
+
+/* CSS for "same result on both sides" */
+li.same_result_as, td.same_result_as, div.same_result_as {
+  background-color: #E0E0E0
+}
+span.same_result_as {
+  color: red;
+  font-weight: bold;
+  font-size: 9pt;
+}
+
+/* CSS related to debug info */
+.result_debug_info, .query_level_debug {
+  font-size: 9pt;
+}
+.result_debug_link, .query_level_debug_link {
+  color: #3264c8;
+  font-size: 9pt;
+}
+.result_debug_link:link, .query_level_debug_link:link {
+  text-decoration: none;
+}
+.result_debug_link:hover, .query_level_debug:hover {
+  text-decoration: underline;
+}
+
+/* CSS related to tainted results */
+.tainted {
+  background-color: #FFAAAA; /* pinkish color */
+}
+
+/* CSS for unsupported gxp result type */
+p.unsupported {
+  background-color: #99CCFF; /* light blue */
+}
+

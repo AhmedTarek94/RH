@@ -1,10 +1,5 @@
 // Background script for RaterHub Task Monitor
 
-// Import filter management system
-importScripts('filters.js');
-// Import analytics system
-importScripts('analytics.js');
-
 // Initialize default settings
 chrome.runtime.onInstalled.addListener(() => {
   const defaultSettings = {
@@ -18,46 +13,23 @@ chrome.runtime.onInstalled.addListener(() => {
     enableMouseMovementDetection: true, // Stop alarm on mouse movement
     enableIncompleteTasksHandling: true, // Handle incomplete tasks
     enableErrorDetection: true, // Enable enhanced error detection
-    darkThemeEnabled: true, // Dark theme setting
-    filters: {
-      taskTypes: [],
-      minDuration: 0,
-      maxDuration: 0,
-      timeRange: {
-        enabled: false,
-        start: '09:00',
-        end: '17:00'
-      },
-      daysOfWeek: [1, 2, 3, 4, 5],
-      minReward: 0,
-      customRules: []
-    },
-    filterPresets: {}
+    darkThemeEnabled: true // Dark theme setting
   };
 
   chrome.storage.sync.set(defaultSettings);
   createContextMenus();
   inspectOpenTabsForTargetUrls();
-  
+
   // Start periodic tab scanning for 403 errors
   startTabScanner();
-  
-  // Initialize filter manager with default settings
-  filterManager.loadFilters();
-  
-  // Initialize analytics system
-  analyticsManager.initialize();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   createContextMenus();
   inspectOpenTabsForTargetUrls();
-  
+
   // Start periodic tab scanning for 403 errors
   startTabScanner();
-  
-  // Initialize analytics system on startup
-  analyticsManager.initialize();
 });
 
 function inspectOpenTabsForTargetUrls() {
@@ -361,99 +333,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
-  // Handle analytics-related messages
-  if (message.action === "analyticsEvent") {
-    handleAnalyticsEvent(message.eventType, message.eventData, sender);
-    return true;
-  }
-  
-  // Handle analytics data requests
-  if (message.action === "getAnalyticsData") {
-    handleAnalyticsDataRequest(message, sendResponse);
-    return true; // Keep message channel open for async response
-  }
-  
-  // Handle analytics export requests
-  if (message.action === "exportAnalyticsData") {
-    handleAnalyticsExportRequest(message, sendResponse);
-    return true; // Keep message channel open for async response
-  }
+
   
   return false;
 });
 
-// Handle analytics events from content scripts and other components
-function handleAnalyticsEvent(eventType, eventData, sender) {
-  if (!analyticsManager.isInitialized) {
-    console.log('Analytics system not initialized, skipping event:', eventType);
-    return;
-  }
-  
-  switch (eventType) {
-    case 'task_found':
-      analyticsManager.trackTaskFound(eventData);
-      break;
-    case 'task_acquired':
-      analyticsManager.trackTaskAcquired(eventData);
-      break;
-    case 'task_completed':
-      analyticsManager.trackTaskCompleted(eventData);
-      break;
-    case 'task_failed':
-      analyticsManager.trackTaskFailed(eventData.errorData, eventData.errorType);
-      break;
-    case 'monitoring_state':
-      analyticsManager.trackMonitoringState(eventData.enabled, eventData.reason);
-      break;
-    default:
-      console.log('Unknown analytics event type:', eventType);
-  }
-}
 
-// Handle analytics data requests
-async function handleAnalyticsDataRequest(message, sendResponse) {
-  try {
-    const { timeframe, summaryType } = message;
-    
-    if (summaryType === 'overview') {
-      const summary = await analyticsManager.getSummary(timeframe);
-      sendResponse({ success: true, data: summary });
-    } else if (summaryType === 'rawEvents') {
-      const events = await analyticsManager.getEvents(timeframe);
-      sendResponse({ success: true, data: events });
-    } else if (summaryType === 'sessions') {
-      const sessions = await analyticsManager.getSessions(timeframe);
-      sendResponse({ success: true, data: sessions });
-    } else {
-      sendResponse({ success: false, error: 'Unknown summary type' });
-    }
-  } catch (error) {
-    console.error('Error handling analytics data request:', error);
-    sendResponse({ success: false, error: error.message });
-  }
-}
-
-// Handle analytics export requests
-async function handleAnalyticsExportRequest(message, sendResponse) {
-  try {
-    const { timeframe, format } = message;
-    
-    let exportData;
-    if (format === 'csv') {
-      exportData = await analyticsManager.exportToCSV(timeframe);
-    } else if (format === 'json') {
-      exportData = await analyticsManager.exportToJSON(timeframe);
-    } else {
-      sendResponse({ success: false, error: 'Unsupported export format' });
-      return;
-    }
-    
-    sendResponse({ success: true, data: exportData, format: format });
-  } catch (error) {
-    console.error('Error handling analytics export request:', error);
-    sendResponse({ success: false, error: error.message });
-  }
-}
 
 // Listen for storage changes to broadcast to all extension components
 chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -510,7 +395,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         if (isTaskShowTab(tab.url)) {
           console.log(`Task/show page detected, checking for 403 errors immediately`);
           setTimeout(() => {
-            checkTabFor403Error(tabId, tab.url);
+            chrome.storage.sync.get(["enableErrorDetection"], (settings) => {
+              if (settings.enableErrorDetection) {
+                checkTabFor403Error(tabId, tab.url);
+              }
+            });
           }, 1000); // Wait 1 second for page to fully render
         }
         
@@ -539,9 +428,9 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   chrome.tabs.get(activeInfo.tabId, (tab) => {
     if (tab.url && isTaskShowTab(tab.url)) {
       console.log(`Activated task/show tab ${activeInfo.tabId}, checking for 403 errors`);
-      
-      chrome.storage.sync.get(["enabled"], (data) => {
-        if (data.enabled) {
+
+      chrome.storage.sync.get(["enabled", "enableErrorDetection"], (data) => {
+        if (data.enabled && data.enableErrorDetection) {
           setTimeout(() => {
             checkTabFor403Error(activeInfo.tabId, tab.url);
           }, 500); // Wait 500ms for tab to fully activate
@@ -549,7 +438,7 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
       });
     } else if (tab.url && isMainPageTab(tab.url)) {
       console.log(`Activated main page tab ${activeInfo.tabId}, checking monitoring status`);
-      
+
       chrome.storage.sync.get(["enabled"], (data) => {
         if (data.enabled) {
           setTimeout(() => {
@@ -581,11 +470,11 @@ function startTabScanner() {
 }
 
 function scanAllTabsFor403Errors() {
-  chrome.storage.sync.get(["enabled"], (data) => {
-    if (!data.enabled) {
-      return; // Only scan if extension is enabled
+  chrome.storage.sync.get(["enabled", "enableErrorDetection"], (data) => {
+    if (!data.enabled || !data.enableErrorDetection) {
+      return; // Only scan if extension is enabled AND error detection is enabled
     }
-    
+
     chrome.tabs.query({}, (tabs) => {
       tabs.forEach((tab) => {
         if (isTaskShowTab(tab.url)) {
