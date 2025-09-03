@@ -194,6 +194,9 @@ document.addEventListener("DOMContentLoaded", () => {
           themeToggle.checked = message.value;
           applyTheme(message.value);
           break;
+        case "enableIncompleteTasksHandling":
+          // No UI element in popup for this setting
+          break;
       }
     }
     return true; // Keep message channel open for async response

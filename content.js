@@ -20,7 +20,15 @@ if (window.raterHubMonitorLoaded) {
     showTestButton: false, // Added for controlling test button visibility
     enableDesktopNotifications: true, // New setting for desktop notifications
     enableErrorDetection: true, // Added for enhanced error detection toggle
+    enableIncompleteTasksHandling: true, // Added for incomplete tasks handling toggle
   };
+
+  // Mouse movement detection variables - moved to global scope to persist
+  let mouseMovementTimeout = null;
+  let lastMouseMoveTime = 0;
+  let mouseMovementHandler = null;
+  let clickHandler = null;
+  const MOUSE_MOVEMENT_DEBOUNCE = 1000; // 1 second debounce
 
   // Initialize the monitor when the page loads
   initialize();
@@ -53,6 +61,7 @@ if (window.raterHubMonitorLoaded) {
         "enableDesktopNotifications",
         "enableErrorDetection",
         "enableMouseMovementDetection",
+        "enableIncompleteTasksHandling",
       ],
       (data) => {
         let interval = data.refreshInterval;
@@ -76,6 +85,10 @@ if (window.raterHubMonitorLoaded) {
           enableMouseMovementDetection:
             data.enableMouseMovementDetection !== undefined
               ? data.enableMouseMovementDetection
+              : true, // Default to true if not set
+          enableIncompleteTasksHandling:
+            data.enableIncompleteTasksHandling !== undefined
+              ? data.enableIncompleteTasksHandling
               : true, // Default to true if not set
         };
 
@@ -116,6 +129,9 @@ if (window.raterHubMonitorLoaded) {
 
           // Refresh test button visibility based on new settings
           refreshTestButton();
+
+          // Add mouse movement detection based on settings
+          addMouseMovementDetection();
         }
       }
     );
@@ -223,6 +239,7 @@ if (window.raterHubMonitorLoaded) {
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "settingsUpdated") {
+      console.log("RaterHub Monitor: Settings updated, reloading...");
       loadSettings();
     } else if (request.action === "startMonitoring") {
       console.log(
@@ -442,6 +459,14 @@ if (window.raterHubMonitorLoaded) {
   }
 
   function checkForIncompleteTasks() {
+    // Check if incomplete tasks handling is enabled in settings
+    if (!currentSettings.enableIncompleteTasksHandling) {
+      console.log(
+        "RaterHub Monitor: Incomplete tasks handling disabled in settings"
+      );
+      return false;
+    }
+
     // Look for "Incomplete tasks" text
     const incompleteTasksText = findTextOnPage("Incomplete tasks");
     const continueButton = findContinueButton();
@@ -866,16 +891,24 @@ if (window.raterHubMonitorLoaded) {
       console.log(
         "RaterHub Monitor: Mouse movement detection disabled in settings"
       );
+      // Remove existing listeners if detection is disabled
+      removeMouseMovementDetection();
       return;
     }
 
     console.log("RaterHub Monitor: Adding mouse movement detection");
 
-    let mouseMovementTimeout;
-    let lastMouseMoveTime = 0;
-    const MOUSE_MOVEMENT_DEBOUNCE = 1000; // 1 second debounce
+    // Clear any existing timeout
+    if (mouseMovementTimeout) {
+      clearTimeout(mouseMovementTimeout);
+      mouseMovementTimeout = null;
+    }
 
-    function handleMouseMovement() {
+    // Remove existing listeners to prevent duplicates
+    removeMouseMovementDetection();
+
+    // Define the mouse movement handler function
+    mouseMovementHandler = function (event) {
       const currentTime = Date.now();
 
       // Debounce mouse movement events to prevent excessive stopping
@@ -890,25 +923,67 @@ if (window.raterHubMonitorLoaded) {
           stopAlarm();
         }
       }
+    };
 
-      // Clear any existing timeout and set a new one
-      if (mouseMovementTimeout) {
-        clearTimeout(mouseMovementTimeout);
-      }
-    }
-
-    // Add mouse movement event listener
-    document.addEventListener("mousemove", handleMouseMovement);
-
-    // Also add click event listener to stop alarm on any click
-    document.addEventListener("click", () => {
+    // Define the click handler function
+    clickHandler = function (event) {
+      // Check if alarm is currently playing
       if (currentAudio && !currentAudio.paused) {
         console.log("RaterHub Monitor: Click detected - stopping alarm");
         stopAlarm();
       }
-    });
+    };
 
-    console.log("RaterHub Monitor: Mouse movement detection enabled");
+    // Add mouse movement event listener
+    try {
+      document.addEventListener("mousemove", mouseMovementHandler, {
+        passive: true,
+      });
+      document.addEventListener("click", clickHandler, { passive: true });
+      console.log(
+        "RaterHub Monitor: Mouse movement detection enabled successfully"
+      );
+    } catch (error) {
+      console.error(
+        "RaterHub Monitor: Failed to add mouse movement detection:",
+        error
+      );
+    }
+  }
+
+  function removeMouseMovementDetection() {
+    // Remove existing event listeners
+    if (mouseMovementHandler) {
+      try {
+        document.removeEventListener("mousemove", mouseMovementHandler);
+        console.log("RaterHub Monitor: Removed mouse movement listener");
+      } catch (error) {
+        console.error(
+          "RaterHub Monitor: Error removing mouse movement listener:",
+          error
+        );
+      }
+      mouseMovementHandler = null;
+    }
+
+    if (clickHandler) {
+      try {
+        document.removeEventListener("click", clickHandler);
+        console.log("RaterHub Monitor: Removed click listener");
+      } catch (error) {
+        console.error(
+          "RaterHub Monitor: Error removing click listener:",
+          error
+        );
+      }
+      clickHandler = null;
+    }
+
+    // Clear any pending timeout
+    if (mouseMovementTimeout) {
+      clearTimeout(mouseMovementTimeout);
+      mouseMovementTimeout = null;
+    }
   }
 
   function fallbackBeep() {

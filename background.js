@@ -422,13 +422,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           }, 1000); // Wait 1 second for page to fully render
         }
 
-        // If this is a task/index page, redirect to main page
-        if (isTaskIndexTab(tab.url)) {
-          console.log(`Task/index page detected, redirecting to main page`);
-          setTimeout(() => {
-            redirectTabToMainPage(tabId);
-          }, 1000); // Wait 1 second for page to fully render
-        }
+        // Handle task/index page with enhanced error detection
+        setTimeout(() => {
+          enhancedErrorDetection(tabId, tab.url);
+        }, 1000); // Wait 1 second for page to fully render
       }
     });
   }
@@ -463,13 +460,13 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
       });
     } else if (tab.url && isTaskIndexTab(tab.url)) {
       console.log(
-        `Activated task/index tab ${activeInfo.tabId}, redirecting to main page`
+        `Activated task/index tab ${activeInfo.tabId}, handling with enhanced error detection`
       );
 
       chrome.storage.sync.get(["enabled"], (data) => {
         if (data.enabled) {
           setTimeout(() => {
-            redirectTabToMainPage(activeInfo.tabId);
+            enhancedErrorDetection(activeInfo.tabId, tab.url);
           }, 500); // Wait 500ms for tab to fully activate
         }
       });
@@ -514,9 +511,9 @@ function scanAllTabsForMainPage() {
           checkTabForMainPageMonitoring(tab.id, tab.url);
         } else if (isTaskIndexTab(tab.url)) {
           console.log(
-            `Task/index page detected in tab ${tab.id}, redirecting to main page`
+            `Task/index page detected in tab ${tab.id}, handling with enhanced error detection`
           );
-          redirectTabToMainPage(tab.id);
+          enhancedErrorDetection(tab.id, tab.url);
         }
       });
     });
@@ -630,6 +627,28 @@ function redirectTabToMainPage(tabId) {
 function startMonitoringOnTab(tabId) {
   // Send message to start monitoring on the specific tab
   sendMessageToTab(tabId, { action: "startMonitoring" });
+}
+
+// Enhanced Error Detection function that handles task/index URL redirection
+function enhancedErrorDetection(tabId, url) {
+  chrome.storage.sync.get(["enableErrorDetection"], (settings) => {
+    if (!settings.enableErrorDetection) {
+      console.log("Error detection is disabled.");
+      return;
+    }
+
+    // Handle task/index URL redirection instantly
+    if (url.endsWith("/task/index")) {
+      console.log(
+        `Instantly redirecting task/index URL in enhancedErrorDetection for tab ${tabId}`
+      );
+      redirectTabToMainPage(tabId);
+      return; // Redirect instantly, no further processing
+    }
+
+    console.log("Performing error detection...");
+    // Additional error detection logic can be added here if needed
+  });
 }
 
 // Clean up old analytics and filter storage keys
