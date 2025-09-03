@@ -339,6 +339,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // Handle audio playing requests from content script
+  if (message.action === "playAlarm") {
+    console.log("Background: Received playAlarm request from content script");
+    playAlarmInBackground();
+    return true;
+  }
+
+  // Handle stop alarm requests from content script
+  if (message.action === "stopAlarm") {
+    console.log("Background: Received stopAlarm request from content script");
+    stopAlarmInBackground();
+    return true;
+  }
+
   return false;
 });
 
@@ -649,6 +663,174 @@ function enhancedErrorDetection(tabId, url) {
     console.log("Performing error detection...");
     // Additional error detection logic can be added here if needed
   });
+}
+
+// Audio playing functions for background context
+async function playAlarmInBackground() {
+  try {
+    console.log("Background: Attempting to play alarm using TTS fallback");
+
+    // Get current settings to determine sound type
+    chrome.storage.sync.get(
+      ["alertSoundType", "alertSoundData"],
+      async (settings) => {
+        const soundType = settings.alertSoundType || "default";
+        const soundData = settings.alertSoundData || "";
+
+        console.log("Background: Sound settings:", { soundType, soundData });
+
+        // Try to play custom sound first if available
+        if (soundType === "file" && soundData) {
+          try {
+            console.log("Background: Attempting to play custom file sound");
+            await playCustomSound(soundData);
+            return;
+          } catch (error) {
+            console.error("Background: Custom file sound failed:", error);
+            // Fall through to TTS
+          }
+        } else if (soundType === "url" && soundData) {
+          try {
+            console.log("Background: Attempting to play URL sound");
+            await playCustomSound(soundData);
+            return;
+          } catch (error) {
+            console.error("Background: URL sound failed:", error);
+            // Fall through to TTS
+          }
+        }
+
+        // Use Chrome TTS API as fallback since Audio API is not available in service workers
+        if (chrome.tts) {
+          const ttsOptions = {
+            voiceName: "Google UK English Female", // Use a clear voice
+            rate: 1.0,
+            pitch: 1.0,
+            volume: 1.0,
+            enqueue: false,
+          };
+
+          // Speak a short alert message
+          chrome.tts.speak("Alert! Tasks are available!", ttsOptions, () => {
+            if (chrome.runtime.lastError) {
+              console.error(
+                "Background: TTS speak error:",
+                chrome.runtime.lastError
+              );
+              // Final fallback: create a simple beep notification
+              createBeepNotification();
+            } else {
+              console.log("Background: TTS alarm played successfully");
+            }
+          });
+        } else {
+          console.log("Background: TTS not available, using beep notification");
+          createBeepNotification();
+        }
+      }
+    );
+  } catch (error) {
+    console.error("Background: Error in playAlarmInBackground:", error);
+    createBeepNotification();
+  }
+}
+
+// Function to play custom sound (file or URL)
+async function playCustomSound(soundData) {
+  return new Promise((resolve, reject) => {
+    try {
+      // Create an audio element in the background page context
+      const audio = new Audio(soundData);
+      audio.volume = 1.0;
+      audio.loop = false;
+
+      audio.addEventListener("canplaythrough", () => {
+        console.log("Background: Custom audio can play through");
+      });
+
+      audio.addEventListener("error", (e) => {
+        console.error("Background: Custom audio error:", e);
+        reject(new Error("Custom audio failed to load"));
+      });
+
+      audio.addEventListener("ended", () => {
+        console.log("Background: Custom audio playback completed");
+        resolve();
+      });
+
+      // Play the audio
+      audio
+        .play()
+        .then(() => {
+          console.log("Background: Custom audio started playing");
+        })
+        .catch((playError) => {
+          console.error("Background: Custom audio play failed:", playError);
+          reject(playError);
+        });
+    } catch (error) {
+      console.error("Background: Error creating custom audio:", error);
+      reject(error);
+    }
+  });
+}
+
+function createBeepNotification() {
+  // Create a simple notification as final fallback
+  chrome.notifications.create(
+    {
+      type: "basic",
+      iconUrl: chrome.runtime.getURL("icon.png"),
+      title: "RHAT - Tasks Available!",
+      message: "🎉 Tasks are available! Click to return to RaterHub.",
+      priority: 2,
+      requireInteraction: true,
+    },
+    (notificationId) => {
+      if (chrome.runtime.lastError) {
+        console.error(
+          "Background: Notification error:",
+          chrome.runtime.lastError
+        );
+      } else {
+        console.log("Background: Beep notification created:", notificationId);
+      }
+    }
+  );
+}
+
+function stopAlarmInBackground() {
+  try {
+    console.log("Background: Stopping alarm in background");
+
+    // Stop any ongoing TTS
+    if (chrome.tts) {
+      chrome.tts.stop();
+      console.log("Background: TTS stopped");
+    }
+
+    // Clear any existing notifications
+    chrome.notifications.getAll((notifications) => {
+      Object.keys(notifications).forEach((notificationId) => {
+        if (
+          notificationId.includes("raterhub") ||
+          notificationId.includes("RHAT") ||
+          notificationId.includes("Tasks Available")
+        ) {
+          chrome.notifications.clear(notificationId, (wasCleared) => {
+            if (wasCleared) {
+              console.log("Background: Cleared notification:", notificationId);
+            }
+          });
+        }
+      });
+    });
+
+    // Note: We can't directly stop Audio objects created in background context
+    // They will stop naturally when they finish playing
+  } catch (error) {
+    console.error("Background: Error stopping alarm:", error);
+  }
 }
 
 // Clean up old analytics and filter storage keys

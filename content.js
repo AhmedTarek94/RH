@@ -763,6 +763,39 @@ if (window.raterHubMonitorLoaded) {
 
   async function playAlarm() {
     try {
+      console.log("RaterHub Monitor: Requesting background to play alarm");
+
+      // Send message to background script to play alarm
+      chrome.runtime.sendMessage({ action: "playAlarm" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "RaterHub Monitor: Error sending playAlarm message:",
+            chrome.runtime.lastError
+          );
+          // Fallback to direct audio playing if background fails
+          playAlarmDirectly();
+        } else {
+          console.log(
+            "RaterHub Monitor: Background alarm request sent successfully"
+          );
+
+          // Show desktop notification if enabled
+          if (currentSettings.enableDesktopNotifications) {
+            showDesktopNotification();
+          }
+        }
+      });
+    } catch (error) {
+      console.error("RaterHub Monitor: Error in playAlarm:", error);
+      // Fallback to direct audio playing
+      playAlarmDirectly();
+    }
+  }
+
+  async function playAlarmDirectly() {
+    try {
+      console.log("RaterHub Monitor: Using direct audio fallback");
+
       // Stop any existing alarm first
       stopAlarm();
 
@@ -797,78 +830,66 @@ if (window.raterHubMonitorLoaded) {
 
       currentAudio.addEventListener("error", (e) => {
         console.error("RaterHub Monitor: Audio error:", e);
-        // Fallback to default alarm if custom sound fails
-        if (currentSettings.alertSoundType !== "default") {
-          console.log("RaterHub Monitor: Falling back to default alarm");
-          playDefaultAlarm();
-        } else {
-          fallbackBeep();
-        }
+        fallbackBeep();
       });
 
       // Play the audio and handle the promise
       try {
         await currentAudio.play();
-        console.log("RaterHub Monitor: Alarm played successfully");
+        console.log("RaterHub Monitor: Direct alarm played successfully");
 
         // Show desktop notification if enabled
         if (currentSettings.enableDesktopNotifications) {
           showDesktopNotification();
         }
       } catch (playError) {
-        console.error("RaterHub Monitor: Failed to play alarm:", playError);
-        // Fallback to default alarm if custom sound fails
-        if (currentSettings.alertSoundType !== "default") {
-          console.log("RaterHub Monitor: Falling back to default alarm");
-          playDefaultAlarm();
-        } else {
-          fallbackBeep();
-        }
-      }
-    } catch (error) {
-      console.error("RaterHub Monitor: Error in playAlarm:", error);
-      playDefaultAlarm();
-    }
-  }
-
-  async function playDefaultAlarm() {
-    try {
-      stopAlarm();
-
-      currentAudio = new Audio(chrome.runtime.getURL("alarm.mp3"));
-      currentAudio.volume = 1.0;
-      currentAudio.loop = false;
-
-      currentAudio.addEventListener("error", (e) => {
-        console.error("RaterHub Monitor: Default audio error:", e);
-        fallbackBeep();
-      });
-
-      try {
-        await currentAudio.play();
-        console.log("RaterHub Monitor: Default alarm played successfully");
-      } catch (playError) {
         console.error(
-          "RaterHub Monitor: Failed to play default alarm:",
+          "RaterHub Monitor: Failed to play direct alarm:",
           playError
         );
         fallbackBeep();
       }
     } catch (error) {
-      console.error("RaterHub Monitor: Error creating default audio:", error);
+      console.error("RaterHub Monitor: Error in playAlarmDirectly:", error);
       fallbackBeep();
     }
   }
 
   function stopAlarm() {
+    try {
+      console.log("RaterHub Monitor: Requesting background to stop alarm");
+
+      // Send message to background script to stop alarm
+      chrome.runtime.sendMessage({ action: "stopAlarm" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "RaterHub Monitor: Error sending stopAlarm message:",
+            chrome.runtime.lastError
+          );
+          // Fallback to direct stop if background fails
+          stopAlarmDirectly();
+        } else {
+          console.log(
+            "RaterHub Monitor: Background stop alarm request sent successfully"
+          );
+        }
+      });
+    } catch (error) {
+      console.error("RaterHub Monitor: Error in stopAlarm:", error);
+      // Fallback to direct stop
+      stopAlarmDirectly();
+    }
+  }
+
+  function stopAlarmDirectly() {
     if (currentAudio) {
       try {
         currentAudio.pause();
         currentAudio.currentTime = 0;
         currentAudio = null;
-        console.log("RaterHub Monitor: Alarm stopped");
+        console.log("RaterHub Monitor: Direct alarm stopped");
       } catch (error) {
-        console.error("RaterHub Monitor: Error stopping alarm:", error);
+        console.error("RaterHub Monitor: Error stopping direct alarm:", error);
       }
     }
   }
