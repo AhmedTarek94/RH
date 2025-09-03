@@ -19,7 +19,7 @@ if (window.raterHubMonitorLoaded) {
     alertSoundData: "",
     showTestButton: false, // Added for controlling test button visibility
     enableDesktopNotifications: true, // New setting for desktop notifications
-    enableErrorDetection: true // Added for enhanced error detection toggle
+    enableErrorDetection: true, // Added for enhanced error detection toggle
   };
 
   // Initialize the monitor when the page loads
@@ -39,58 +39,86 @@ if (window.raterHubMonitorLoaded) {
 
     // Add test button for development/testing
     addTestButton();
-
-    // Add mouse movement detection to stop alarm
-    addMouseMovementDetection();
   }
 
   function loadSettings() {
-    chrome.storage.sync.get([
-      "enabled", "mode", "refreshInterval", "alertSoundType", "alertSoundData",
-      "showTestButton", "enableDesktopNotifications", "enableErrorDetection"
-    ], (data) => {
-      let interval = data.refreshInterval;
-      if (typeof interval === "string") interval = parseFloat(interval);
-      
-      currentSettings = {
-        enabled: data.enabled || false,
-        mode: data.mode || "alarm_only",
-        refreshInterval: interval || 5,
-        alertSoundType: data.alertSoundType || "default",
-        alertSoundData: data.alertSoundData || "",
-        showTestButton: data.showTestButton || false, // Load showTestButton setting
-        enableDesktopNotifications: data.enableDesktopNotifications !== undefined ? data.enableDesktopNotifications : true, // Default to true if not set
-        enableErrorDetection: data.enableErrorDetection !== undefined ? data.enableErrorDetection : true // Default to true if not set
-      };
+    chrome.storage.sync.get(
+      [
+        "enabled",
+        "mode",
+        "refreshInterval",
+        "alertSoundType",
+        "alertSoundData",
+        "showTestButton",
+        "enableDesktopNotifications",
+        "enableErrorDetection",
+        "enableMouseMovementDetection",
+      ],
+      (data) => {
+        let interval = data.refreshInterval;
+        if (typeof interval === "string") interval = parseFloat(interval);
 
-      console.log("RaterHub Monitor: Current settings:", currentSettings);
-      console.log("RaterHub Monitor: Mode is:", currentSettings.mode);
-      console.log("RaterHub Monitor: Mode comparison with 'alarm_and_click':", currentSettings.mode === "alarm_and_click");
+        currentSettings = {
+          enabled: data.enabled || false,
+          mode: data.mode || "alarm_only",
+          refreshInterval: interval || 5,
+          alertSoundType: data.alertSoundType || "default",
+          alertSoundData: data.alertSoundData || "",
+          showTestButton: data.showTestButton || false, // Load showTestButton setting
+          enableDesktopNotifications:
+            data.enableDesktopNotifications !== undefined
+              ? data.enableDesktopNotifications
+              : true, // Default to true if not set
+          enableErrorDetection:
+            data.enableErrorDetection !== undefined
+              ? data.enableErrorDetection
+              : true, // Default to true if not set
+          enableMouseMovementDetection:
+            data.enableMouseMovementDetection !== undefined
+              ? data.enableMouseMovementDetection
+              : true, // Default to true if not set
+        };
 
-      // For file type sounds, check local storage as well for reliability
-      if (currentSettings.alertSoundType === "file" && !currentSettings.alertSoundData) {
-        chrome.storage.local.get(["alertSoundData"], (localData) => {
-          if (localData.alertSoundData) {
-            currentSettings.alertSoundData = localData.alertSoundData;
-            console.log("RaterHub Monitor: Retrieved file data from local storage");
-          }
-          
+        console.log("RaterHub Monitor: Current settings:", currentSettings);
+        console.log("RaterHub Monitor: Mode is:", currentSettings.mode);
+        console.log(
+          "RaterHub Monitor: Mode comparison with 'alarm_and_click':",
+          currentSettings.mode === "alarm_and_click"
+        );
+
+        // For file type sounds, check local storage as well for reliability
+        if (
+          currentSettings.alertSoundType === "file" &&
+          !currentSettings.alertSoundData
+        ) {
+          chrome.storage.local.get(["alertSoundData"], (localData) => {
+            if (localData.alertSoundData) {
+              currentSettings.alertSoundData = localData.alertSoundData;
+              console.log(
+                "RaterHub Monitor: Retrieved file data from local storage"
+              );
+            }
+
+            if (currentSettings.enabled) {
+              startMonitoring();
+            }
+
+            // Refresh test button visibility based on new settings
+            refreshTestButton();
+
+            // Add mouse movement detection based on settings
+            addMouseMovementDetection();
+          });
+        } else {
           if (currentSettings.enabled) {
             startMonitoring();
           }
-          
+
           // Refresh test button visibility based on new settings
           refreshTestButton();
-        });
-      } else {
-        if (currentSettings.enabled) {
-          startMonitoring();
         }
-        
-        // Refresh test button visibility based on new settings
-        refreshTestButton();
       }
-    });
+    );
   }
 
   function refreshTestButton() {
@@ -99,7 +127,7 @@ if (window.raterHubMonitorLoaded) {
     if (existingButton) {
       existingButton.remove();
     }
-    
+
     // Add test button if enabled
     addTestButton();
   }
@@ -112,39 +140,65 @@ if (window.raterHubMonitorLoaded) {
 
     // Only perform redirects if the extension is enabled
     if (!currentSettings.enabled) {
-      console.log("RaterHub Monitor: Extension disabled, no redirects performed");
+      console.log(
+        "RaterHub Monitor: Extension disabled, no redirects performed"
+      );
       return;
     }
 
-  // Check for 403 Forbidden error on task/show pages or task/index pages
-  if (currentSettings.enableErrorDetection) {
-    if ((currentUrl.includes("/task/show") && 
-        (document.body.innerText.includes("Error 403 Forbidden") || 
-         document.body.innerText.includes("This task has already been SUBMITTED"))) ||
-        currentUrl === indexUrl) {
-      console.log("RaterHub Monitor: Task already submitted or index page detected, redirecting to main page");
-      console.log("RaterHub Monitor: Current URL:", currentUrl);
-      console.log("RaterHub Monitor: Page content contains 'Error 403 Forbidden':", document.body.innerText.includes("Error 403 Forbidden"));
-      console.log("RaterHub Monitor: Page content contains 'This task has already been SUBMITTED':", document.body.innerText.includes("This task has already been SUBMITTED"));
-      console.log("RaterHub Monitor: Is index page:", currentUrl === indexUrl);
-      console.log("RaterHub Monitor: Redirecting to:", mainUrl);
-      window.location.href = mainUrl;
-      return;
+    // Check for 403 Forbidden error on task/show pages or task/index pages
+    if (currentSettings.enableErrorDetection) {
+      if (
+        (currentUrl.includes("/task/show") &&
+          (document.body.innerText.includes("Error 403 Forbidden") ||
+            document.body.innerText.includes(
+              "This task has already been SUBMITTED"
+            ))) ||
+        currentUrl === indexUrl
+      ) {
+        console.log(
+          "RaterHub Monitor: Task already submitted or index page detected, redirecting to main page"
+        );
+        console.log("RaterHub Monitor: Current URL:", currentUrl);
+        console.log(
+          "RaterHub Monitor: Page content contains 'Error 403 Forbidden':",
+          document.body.innerText.includes("Error 403 Forbidden")
+        );
+        console.log(
+          "RaterHub Monitor: Page content contains 'This task has already been SUBMITTED':",
+          document.body.innerText.includes(
+            "This task has already been SUBMITTED"
+          )
+        );
+        console.log(
+          "RaterHub Monitor: Is index page:",
+          currentUrl === indexUrl
+        );
+        console.log("RaterHub Monitor: Redirecting to:", mainUrl);
+        window.location.href = mainUrl;
+        return;
+      }
     }
-  }
 
     // Check for task/show pages with taskIds (normal task pages)
     if (currentUrl.includes("/task/show") && currentUrl.includes("taskIds=")) {
-      console.log("RaterHub Monitor: On task/show page with taskIds, stopping monitoring");
+      console.log(
+        "RaterHub Monitor: On task/show page with taskIds, stopping monitoring"
+      );
       stopMonitoring();
       return;
     }
 
     // Check for index page or other forbidden pages
     if (currentSettings.enableErrorDetection) {
-      if (currentUrl === indexUrl ||
-          (document.body.innerText.toLowerCase().includes("forbidden") && !currentUrl.includes("/task/show"))) {
-        console.log("RaterHub Monitor: On forbidden or index page, redirecting to main page");
+      if (
+        currentUrl === indexUrl ||
+        (document.body.innerText.toLowerCase().includes("forbidden") &&
+          !currentUrl.includes("/task/show"))
+      ) {
+        console.log(
+          "RaterHub Monitor: On forbidden or index page, redirecting to main page"
+        );
         window.location.href = mainUrl;
         return;
       }
@@ -159,7 +213,9 @@ if (window.raterHubMonitorLoaded) {
 
     // On main page, ensure monitoring is active if enabled
     if (currentSettings.enabled && !isMonitoring) {
-      console.log("RaterHub Monitor: On main page and enabled, starting monitoring");
+      console.log(
+        "RaterHub Monitor: On main page and enabled, starting monitoring"
+      );
       startMonitoring();
     }
   }
@@ -169,9 +225,13 @@ if (window.raterHubMonitorLoaded) {
     if (request.action === "settingsUpdated") {
       loadSettings();
     } else if (request.action === "startMonitoring") {
-      console.log("RaterHub Monitor: Received startMonitoring message from background script");
+      console.log(
+        "RaterHub Monitor: Received startMonitoring message from background script"
+      );
       if (currentSettings.enabled && !isMonitoring) {
-        console.log("RaterHub Monitor: Starting monitoring due to background script request");
+        console.log(
+          "RaterHub Monitor: Starting monitoring due to background script request"
+        );
         startMonitoring();
       }
     }
@@ -182,21 +242,29 @@ if (window.raterHubMonitorLoaded) {
       stopMonitoring();
     }
 
-    console.log(`RaterHub Monitor: Starting monitoring with ${currentSettings.refreshInterval}s interval`);
+    console.log(
+      `RaterHub Monitor: Starting monitoring with ${currentSettings.refreshInterval}s interval`
+    );
     isMonitoring = true;
     incompleteTasksDetected = false;
 
     // Don't check immediately - wait for the first interval
     const intervalMs = Number(currentSettings.refreshInterval) * 1000;
-    console.log(`RaterHub Monitor: Setting interval to ${intervalMs}ms (${currentSettings.refreshInterval}s)`);
+    console.log(
+      `RaterHub Monitor: Setting interval to ${intervalMs}ms (${currentSettings.refreshInterval}s)`
+    );
 
     monitorInterval = setInterval(() => {
-      console.log(`RaterHub Monitor: Interval check (every ${currentSettings.refreshInterval}s)`);
+      console.log(
+        `RaterHub Monitor: Interval check (every ${currentSettings.refreshInterval}s)`
+      );
       checkForTasks();
     }, intervalMs);
 
     // Show a status message
-    console.log(`RaterHub Monitor: Monitoring started. Will check every ${currentSettings.refreshInterval} seconds.`);
+    console.log(
+      `RaterHub Monitor: Monitoring started. Will check every ${currentSettings.refreshInterval} seconds.`
+    );
   }
 
   function stopMonitoring() {
@@ -221,11 +289,17 @@ if (window.raterHubMonitorLoaded) {
     const currentTime = Date.now();
     const timeSinceLastRefresh = (currentTime - lastRefreshTime) / 1000;
 
-    console.log(`RaterHub Monitor: Time since last refresh: ${timeSinceLastRefresh.toFixed(1)}s`);
+    console.log(
+      `RaterHub Monitor: Time since last refresh: ${timeSinceLastRefresh.toFixed(
+        1
+      )}s`
+    );
 
     // Prevent refreshing too frequently (minimum 2 seconds between refreshes)
     if (timeSinceLastRefresh < 2) {
-      console.log("RaterHub Monitor: Skipping check - too soon since last refresh");
+      console.log(
+        "RaterHub Monitor: Skipping check - too soon since last refresh"
+      );
       return;
     }
 
@@ -235,8 +309,11 @@ if (window.raterHubMonitorLoaded) {
     }
 
     // Check for "No tasks are currently available" element
-    const noTasksFullText = "No tasks are currently available. Please try again later.";
-    const noTasksElement = document.querySelector("h2.ewok-rater-task-header.ewok-rater-no-tasks");
+    const noTasksFullText =
+      "No tasks are currently available. Please try again later.";
+    const noTasksElement = document.querySelector(
+      "h2.ewok-rater-task-header.ewok-rater-no-tasks"
+    );
     let noTasksExists = false;
     if (noTasksElement) {
       const elementText = noTasksElement.textContent.trim();
@@ -254,14 +331,18 @@ if (window.raterHubMonitorLoaded) {
       noTasksElementFound: !!noTasksElement,
       noTasksFullTextMatch: noTasksExists,
       acquireButtonFound: !!acquireButton,
-      noTasksElementText: noTasksElement ? noTasksElement.textContent.trim() : "not found",
+      noTasksElementText: noTasksElement
+        ? noTasksElement.textContent.trim()
+        : "not found",
       refreshInterval: currentSettings.refreshInterval,
       timeSinceLastRefresh: timeSinceLastRefresh.toFixed(1) + "s",
     });
 
     if (noTasksExists && !acquireButton) {
       // No tasks available, redirect to main page
-      console.log("RaterHub Monitor: No tasks found, redirecting to main page.");
+      console.log(
+        "RaterHub Monitor: No tasks found, redirecting to main page."
+      );
 
       // Record the refresh time
       lastRefreshTime = currentTime;
@@ -276,9 +357,15 @@ if (window.raterHubMonitorLoaded) {
       console.log("RaterHub Monitor: Tasks available!");
       console.log("RaterHub Monitor: Current mode:", currentSettings.mode);
       console.log("RaterHub Monitor: Acquire button found:", acquireButton);
-      console.log("RaterHub Monitor: Button text:", acquireButton.textContent || acquireButton.value || "No text");
+      console.log(
+        "RaterHub Monitor: Button text:",
+        acquireButton.textContent || acquireButton.value || "No text"
+      );
       console.log("RaterHub Monitor: Button tag:", acquireButton.tagName);
-      console.log("RaterHub Monitor: Button href:", acquireButton.href || "No href");
+      console.log(
+        "RaterHub Monitor: Button href:",
+        acquireButton.href || "No href"
+      );
 
       console.log("RaterHub Monitor: Stopping monitoring and playing alarm...");
       stopMonitoring(); // Stop monitoring immediately
@@ -288,7 +375,7 @@ if (window.raterHubMonitorLoaded) {
         console.log("RaterHub Monitor: Auto-clicking acquire button instantly");
 
         // Set flag to play alarm after page navigation
-        sessionStorage.setItem('raterhub_pending_alarm', 'true');
+        sessionStorage.setItem("raterhub_pending_alarm", "true");
 
         // Small delay to ensure button is fully ready
         setTimeout(() => {
@@ -301,39 +388,55 @@ if (window.raterHubMonitorLoaded) {
 
             // Try alternative click methods
             try {
-              if (acquireButton.tagName === 'A') {
+              if (acquireButton.tagName === "A") {
                 // For links, try to navigate directly
-                console.log("RaterHub Monitor: Trying direct navigation for link");
+                console.log(
+                  "RaterHub Monitor: Trying direct navigation for link"
+                );
                 window.location.href = acquireButton.href;
               } else {
                 // For buttons, try dispatching a click event
                 console.log("RaterHub Monitor: Trying dispatched click event");
-                const clickEvent = new MouseEvent('click', {
+                const clickEvent = new MouseEvent("click", {
                   view: window,
                   bubbles: true,
-                  cancelable: true
+                  cancelable: true,
                 });
                 acquireButton.dispatchEvent(clickEvent);
               }
-              console.log("RaterHub Monitor: Alternative click method executed");
+              console.log(
+                "RaterHub Monitor: Alternative click method executed"
+              );
             } catch (altError) {
-              console.error("RaterHub Monitor: Alternative click method also failed:", altError);
+              console.error(
+                "RaterHub Monitor: Alternative click method also failed:",
+                altError
+              );
             }
           }
         }, 50); // 50ms delay to ensure button is ready
       } else {
         // Alarm only mode - just play alarm
-        console.log("RaterHub Monitor: Alarm only mode - not auto-clicking button");
+        console.log(
+          "RaterHub Monitor: Alarm only mode - not auto-clicking button"
+        );
         playAlarm();
       }
     } else if (!noTasksExists && !acquireButton) {
       // Page might be in a different state - don't refresh, just wait for next interval
-      console.log("RaterHub Monitor: Page state unclear - waiting for next interval");
+      console.log(
+        "RaterHub Monitor: Page state unclear - waiting for next interval"
+      );
 
       // Look for any task-related elements to understand page state
-      const taskElements = document.querySelectorAll('[class*="task"], [class*="ewok"], [id*="task"]');
+      const taskElements = document.querySelectorAll(
+        '[class*="task"], [class*="ewok"], [id*="task"]'
+      );
       if (taskElements.length > 0) {
-        console.log("RaterHub Monitor: Found task-related elements:", taskElements.length);
+        console.log(
+          "RaterHub Monitor: Found task-related elements:",
+          taskElements.length
+        );
       }
     }
   }
@@ -344,7 +447,9 @@ if (window.raterHubMonitorLoaded) {
     const continueButton = findContinueButton();
 
     if (incompleteTasksText && continueButton && !incompleteTasksDetected) {
-      console.log("RaterHub Monitor: Incomplete tasks detected with Continue button!");
+      console.log(
+        "RaterHub Monitor: Incomplete tasks detected with Continue button!"
+      );
       incompleteTasksDetected = true;
 
       // Stop monitoring immediately
@@ -352,7 +457,7 @@ if (window.raterHubMonitorLoaded) {
 
       // Show popup asking user what to do
       showIncompleteTasksPopup(continueButton);
-      
+
       // Show desktop notification for incomplete tasks if enabled
       if (currentSettings.enableDesktopNotifications) {
         showIncompleteTasksNotification();
@@ -379,7 +484,12 @@ if (window.raterHubMonitorLoaded) {
     let node;
     while ((node = walker.nextNode())) {
       if (node.textContent.toLowerCase().includes(searchText.toLowerCase())) {
-        console.log("RaterHub Monitor: Found text:", searchText, "in element:", node.parentElement);
+        console.log(
+          "RaterHub Monitor: Found text:",
+          searchText,
+          "in element:",
+          node.parentElement
+        );
         return node.parentElement;
       }
     }
@@ -389,9 +499,13 @@ if (window.raterHubMonitorLoaded) {
 
   function findContinueButton() {
     // Look for button with text "Continue" (case insensitive)
-    const buttons = document.querySelectorAll('button, input[type="button"], input[type="submit"], a');
+    const buttons = document.querySelectorAll(
+      'button, input[type="button"], input[type="submit"], a'
+    );
     for (let button of buttons) {
-      const text = (button.textContent || button.value || "").trim().toLowerCase();
+      const text = (button.textContent || button.value || "")
+        .trim()
+        .toLowerCase();
       if (text.includes("continue")) {
         console.log("RaterHub Monitor: Found continue button:", button);
         return button;
@@ -482,14 +596,28 @@ if (window.raterHubMonitorLoaded) {
     const yesBtn = popup.querySelector("#raterhub-continue-yes");
     const noBtn = popup.querySelector("#raterhub-continue-no");
 
-    yesBtn.addEventListener("mouseover", () => (yesBtn.style.background = "#059669"));
-    yesBtn.addEventListener("mouseout", () => (yesBtn.style.background = "#10b981"));
-    noBtn.addEventListener("mouseover", () => (noBtn.style.background = "#dc2626"));
-    noBtn.addEventListener("mouseout", () => (noBtn.style.background = "#ef4444"));
+    yesBtn.addEventListener(
+      "mouseover",
+      () => (yesBtn.style.background = "#059669")
+    );
+    yesBtn.addEventListener(
+      "mouseout",
+      () => (yesBtn.style.background = "#10b981")
+    );
+    noBtn.addEventListener(
+      "mouseover",
+      () => (noBtn.style.background = "#dc2626")
+    );
+    noBtn.addEventListener(
+      "mouseout",
+      () => (noBtn.style.background = "#ef4444")
+    );
 
     // Handle button clicks
     yesBtn.addEventListener("click", () => {
-      console.log("RaterHub Monitor: User chose to continue with incomplete tasks");
+      console.log(
+        "RaterHub Monitor: User chose to continue with incomplete tasks"
+      );
       document.body.removeChild(overlay);
 
       // Click the continue button
@@ -499,14 +627,18 @@ if (window.raterHubMonitorLoaded) {
       setTimeout(() => {
         incompleteTasksDetected = false;
         if (currentSettings.enabled) {
-          console.log("RaterHub Monitor: Restarting monitoring after continuing incomplete tasks");
+          console.log(
+            "RaterHub Monitor: Restarting monitoring after continuing incomplete tasks"
+          );
           startMonitoring();
         }
       }, 2000);
     });
 
     noBtn.addEventListener("click", () => {
-      console.log("RaterHub Monitor: User chose to stop monitoring due to incomplete tasks");
+      console.log(
+        "RaterHub Monitor: User chose to stop monitoring due to incomplete tasks"
+      );
       document.body.removeChild(overlay);
 
       // Stop monitoring and disable extension
@@ -527,27 +659,43 @@ if (window.raterHubMonitorLoaded) {
     });
   }
 
-
-
   function findAcquireButton() {
     console.log("RaterHub Monitor: Searching for acquire button...");
-    
+
     // Look for <a> element with href containing 'task/new?acquireToken='
-    const acquireLinks = document.querySelectorAll('a[href*="task/new?acquireToken="]');
+    const acquireLinks = document.querySelectorAll(
+      'a[href*="task/new?acquireToken="]'
+    );
     if (acquireLinks.length > 0) {
-      console.log("RaterHub Monitor: Found acquire link with acquireToken:", acquireLinks[0]);
+      console.log(
+        "RaterHub Monitor: Found acquire link with acquireToken:",
+        acquireLinks[0]
+      );
       console.log("RaterHub Monitor: Link href:", acquireLinks[0].href);
       console.log("RaterHub Monitor: Link text:", acquireLinks[0].textContent);
       return acquireLinks[0];
     }
 
     // Fallback: Look for button with text "Acquire if available" (case insensitive)
-    const buttons = document.querySelectorAll('button, input[type="button"], input[type="submit"], a');
-    console.log("RaterHub Monitor: Found", buttons.length, "potential button elements");
-    
+    const buttons = document.querySelectorAll(
+      'button, input[type="button"], input[type="submit"], a'
+    );
+    console.log(
+      "RaterHub Monitor: Found",
+      buttons.length,
+      "potential button elements"
+    );
+
     for (let button of buttons) {
-      const text = (button.textContent || button.value || "").trim().toLowerCase();
-      console.log("RaterHub Monitor: Checking button:", button.tagName, "Text:", text);
+      const text = (button.textContent || button.value || "")
+        .trim()
+        .toLowerCase();
+      console.log(
+        "RaterHub Monitor: Checking button:",
+        button.tagName,
+        "Text:",
+        text
+      );
       if (text.includes("acquire") && text.includes("available")) {
         console.log("RaterHub Monitor: Found acquire button:", button);
         console.log("RaterHub Monitor: Button details:", {
@@ -555,7 +703,7 @@ if (window.raterHubMonitorLoaded) {
           text: button.textContent || button.value,
           href: button.href || "No href",
           className: button.className,
-          id: button.id
+          id: button.id,
         });
         return button;
       }
@@ -563,15 +711,22 @@ if (window.raterHubMonitorLoaded) {
 
     // Also look for any button that contains just "acquire"
     for (let button of buttons) {
-      const text = (button.textContent || button.value || "").trim().toLowerCase();
+      const text = (button.textContent || button.value || "")
+        .trim()
+        .toLowerCase();
       if (text.includes("acquire")) {
-        console.log("RaterHub Monitor: Found potential acquire button:", button, "Text:", text);
+        console.log(
+          "RaterHub Monitor: Found potential acquire button:",
+          button,
+          "Text:",
+          text
+        );
         console.log("RaterHub Monitor: Button details:", {
           tagName: button.tagName,
           text: button.textContent || button.value,
           href: button.href || "No href",
           className: button.className,
-          id: button.id
+          id: button.id,
         });
         return button;
       }
@@ -585,31 +740,37 @@ if (window.raterHubMonitorLoaded) {
     try {
       // Stop any existing alarm first
       stopAlarm();
-      
+
       let audioUrl;
-      
-      if (currentSettings.alertSoundType === "file" && currentSettings.alertSoundData) {
+
+      if (
+        currentSettings.alertSoundType === "file" &&
+        currentSettings.alertSoundData
+      ) {
         // Play custom file sound
         audioUrl = currentSettings.alertSoundData;
-      } else if (currentSettings.alertSoundType === "url" && currentSettings.alertSoundData) {
+      } else if (
+        currentSettings.alertSoundType === "url" &&
+        currentSettings.alertSoundData
+      ) {
         // Play URL sound
         audioUrl = currentSettings.alertSoundData;
       } else {
         // Play default alarm
         audioUrl = chrome.runtime.getURL("alarm.mp3");
       }
-      
+
       // Create and play audio
       currentAudio = new Audio(audioUrl);
       currentAudio.volume = 1.0;
       currentAudio.loop = false;
-      
+
       // Add event listeners for better error handling
-      currentAudio.addEventListener('canplaythrough', () => {
+      currentAudio.addEventListener("canplaythrough", () => {
         console.log("RaterHub Monitor: Audio can play through");
       });
-      
-      currentAudio.addEventListener('error', (e) => {
+
+      currentAudio.addEventListener("error", (e) => {
         console.error("RaterHub Monitor: Audio error:", e);
         // Fallback to default alarm if custom sound fails
         if (currentSettings.alertSoundType !== "default") {
@@ -619,12 +780,12 @@ if (window.raterHubMonitorLoaded) {
           fallbackBeep();
         }
       });
-      
+
       // Play the audio and handle the promise
       try {
         await currentAudio.play();
         console.log("RaterHub Monitor: Alarm played successfully");
-        
+
         // Show desktop notification if enabled
         if (currentSettings.enableDesktopNotifications) {
           showDesktopNotification();
@@ -648,21 +809,24 @@ if (window.raterHubMonitorLoaded) {
   async function playDefaultAlarm() {
     try {
       stopAlarm();
-      
+
       currentAudio = new Audio(chrome.runtime.getURL("alarm.mp3"));
       currentAudio.volume = 1.0;
       currentAudio.loop = false;
-      
-      currentAudio.addEventListener('error', (e) => {
+
+      currentAudio.addEventListener("error", (e) => {
         console.error("RaterHub Monitor: Default audio error:", e);
         fallbackBeep();
       });
-      
+
       try {
         await currentAudio.play();
         console.log("RaterHub Monitor: Default alarm played successfully");
       } catch (playError) {
-        console.error("RaterHub Monitor: Failed to play default alarm:", playError);
+        console.error(
+          "RaterHub Monitor: Failed to play default alarm:",
+          playError
+        );
         fallbackBeep();
       }
     } catch (error) {
@@ -686,15 +850,25 @@ if (window.raterHubMonitorLoaded) {
 
   function checkForPendingAlarm() {
     // Check if there's a pending alarm from acquire button click
-    const pendingAlarm = sessionStorage.getItem('raterhub_pending_alarm');
+    const pendingAlarm = sessionStorage.getItem("raterhub_pending_alarm");
     if (pendingAlarm) {
-      console.log("RaterHub Monitor: Found pending alarm from acquire button click - playing alarm now");
-      sessionStorage.removeItem('raterhub_pending_alarm');
+      console.log(
+        "RaterHub Monitor: Found pending alarm from acquire button click - playing alarm now"
+      );
+      sessionStorage.removeItem("raterhub_pending_alarm");
       playAlarm();
     }
   }
 
   function addMouseMovementDetection() {
+    // Check if mouse movement detection is enabled in settings
+    if (!currentSettings.enableMouseMovementDetection) {
+      console.log(
+        "RaterHub Monitor: Mouse movement detection disabled in settings"
+      );
+      return;
+    }
+
     console.log("RaterHub Monitor: Adding mouse movement detection");
 
     let mouseMovementTimeout;
@@ -710,7 +884,9 @@ if (window.raterHubMonitorLoaded) {
 
         // Check if alarm is currently playing
         if (currentAudio && !currentAudio.paused) {
-          console.log("RaterHub Monitor: Mouse movement detected - stopping alarm");
+          console.log(
+            "RaterHub Monitor: Mouse movement detected - stopping alarm"
+          );
           stopAlarm();
         }
       }
@@ -722,10 +898,10 @@ if (window.raterHubMonitorLoaded) {
     }
 
     // Add mouse movement event listener
-    document.addEventListener('mousemove', handleMouseMovement);
+    document.addEventListener("mousemove", handleMouseMovement);
 
     // Also add click event listener to stop alarm on any click
-    document.addEventListener('click', () => {
+    document.addEventListener("click", () => {
       if (currentAudio && !currentAudio.paused) {
         console.log("RaterHub Monitor: Click detected - stopping alarm");
         stopAlarm();
@@ -738,7 +914,8 @@ if (window.raterHubMonitorLoaded) {
   function fallbackBeep() {
     try {
       // Create a simple beep using Web Audio API
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -749,7 +926,10 @@ if (window.raterHubMonitorLoaded) {
       oscillator.type = "sine";
 
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioContext.currentTime + 1
+      );
 
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 1);
@@ -773,11 +953,11 @@ if (window.raterHubMonitorLoaded) {
       const notification = new Notification("RaterHub Task Monitor", {
         body: "🎉 Tasks are available! Click to return to RaterHub.",
         icon: chrome.runtime.getURL("icon.png"),
-        tag: "raterhub-task-alert"
+        tag: "raterhub-task-alert",
       });
 
       // Add click handler to focus the RaterHub tab
-      notification.onclick = function() {
+      notification.onclick = function () {
         window.focus();
         this.close();
       };
@@ -790,16 +970,16 @@ if (window.raterHubMonitorLoaded) {
       console.log("RaterHub Monitor: Desktop notification shown");
     } else if (Notification.permission !== "denied") {
       // Request permission from user
-      Notification.requestPermission().then(function(permission) {
+      Notification.requestPermission().then(function (permission) {
         if (permission === "granted") {
           // Create notification after permission is granted
           const notification = new Notification("RaterHub Task Monitor", {
             body: "🎉 Tasks are available! Click to return to RaterHub.",
             icon: chrome.runtime.getURL("icon.png"),
-            tag: "raterhub-task-alert"
+            tag: "raterhub-task-alert",
           });
 
-          notification.onclick = function() {
+          notification.onclick = function () {
             window.focus();
             this.close();
           };
@@ -808,7 +988,9 @@ if (window.raterHubMonitorLoaded) {
             notification.close();
           }, 10000);
 
-          console.log("RaterHub Monitor: Desktop notification shown after permission granted");
+          console.log(
+            "RaterHub Monitor: Desktop notification shown after permission granted"
+          );
         }
       });
     }
@@ -827,11 +1009,11 @@ if (window.raterHubMonitorLoaded) {
       const notification = new Notification("RaterHub Task Monitor", {
         body: "⚠️ Incomplete tasks detected! Click to continue working.",
         icon: chrome.runtime.getURL("icon.png"),
-        tag: "raterhub-incomplete-tasks-alert"
+        tag: "raterhub-incomplete-tasks-alert",
       });
 
       // Add click handler to focus the RaterHub tab
-      notification.onclick = function() {
+      notification.onclick = function () {
         window.focus();
         this.close();
       };
@@ -841,19 +1023,21 @@ if (window.raterHubMonitorLoaded) {
         notification.close();
       }, 10000);
 
-      console.log("RaterHub Monitor: Incomplete tasks desktop notification shown");
+      console.log(
+        "RaterHub Monitor: Incomplete tasks desktop notification shown"
+      );
     } else if (Notification.permission !== "denied") {
       // Request permission from user
-      Notification.requestPermission().then(function(permission) {
+      Notification.requestPermission().then(function (permission) {
         if (permission === "granted") {
           // Create notification after permission is granted
           const notification = new Notification("RaterHub Task Monitor", {
             body: "⚠️ Incomplete tasks detected! Click to continue working.",
             icon: chrome.runtime.getURL("icon.png"),
-            tag: "raterhub-incomplete-tasks-alert"
+            tag: "raterhub-incomplete-tasks-alert",
           });
 
-          notification.onclick = function() {
+          notification.onclick = function () {
             window.focus();
             this.close();
           };
@@ -862,7 +1046,9 @@ if (window.raterHubMonitorLoaded) {
             notification.close();
           }, 10000);
 
-          console.log("RaterHub Monitor: Incomplete tasks desktop notification shown after permission granted");
+          console.log(
+            "RaterHub Monitor: Incomplete tasks desktop notification shown after permission granted"
+          );
         }
       });
     }
@@ -873,7 +1059,7 @@ if (window.raterHubMonitorLoaded) {
     if (!currentSettings.showTestButton) {
       return;
     }
-    
+
     // Remove any existing test button first
     const existingButton = document.getElementById("raterhub-test-button");
     if (existingButton) {
@@ -921,7 +1107,9 @@ if (window.raterHubMonitorLoaded) {
 
     // Add click functionality
     buttonElement.addEventListener("click", () => {
-      console.log("RaterHub Monitor: Test button clicked - simulating acquire button detection");
+      console.log(
+        "RaterHub Monitor: Test button clicked - simulating acquire button detection"
+      );
       simulateAcquireButtonFound();
     });
 
@@ -933,19 +1121,25 @@ if (window.raterHubMonitorLoaded) {
     // Check if monitoring is active
     if (!currentSettings.enabled || !isMonitoring) {
       console.log("RaterHub Monitor: Test failed - monitoring not active");
-      alert("❌ Test failed: Extension must be enabled and monitoring active to test acquire button detection");
+      alert(
+        "❌ Test failed: Extension must be enabled and monitoring active to test acquire button detection"
+      );
       return;
     }
 
-    console.log("RaterHub Monitor: Simulating acquire button found - stopping monitoring and playing alarm");
-    
+    console.log(
+      "RaterHub Monitor: Simulating acquire button found - stopping monitoring and playing alarm"
+    );
+
     // Stop monitoring immediately (simulating task found)
     stopMonitoring();
-    
+
     if (currentSettings.mode === "alarm_and_click") {
       // Simulate auto-click behavior first, then play alarm
-      console.log("RaterHub Monitor: Test mode is 'alarm_and_click' - simulating auto-click behavior first");
-      
+      console.log(
+        "RaterHub Monitor: Test mode is 'alarm_and_click' - simulating auto-click behavior first"
+      );
+
       // Play alarm after simulating the click behavior
       setTimeout(() => {
         playAlarm();
@@ -954,7 +1148,7 @@ if (window.raterHubMonitorLoaded) {
       // Alarm only mode - just play alarm
       playAlarm();
     }
-    
+
     // Show success message
     showTestSuccessMessage();
   }
@@ -988,7 +1182,7 @@ if (window.raterHubMonitorLoaded) {
         ✅ Test successful! Acquire button simulated
       </div>
     `;
-    
+
     // Add to page
     document.body.appendChild(message);
   }

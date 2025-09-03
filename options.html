@@ -98,10 +98,7 @@
     <div class="options-container">
       <header class="options-header">
         <div class="header-content">
-          <h1 class="options-title">
-            <span class="title-icon">🎯</span>
-            RHAT
-          </h1>
+          <h1 class="options-title">RHAT</h1>
           <p class="options-subtitle">
             RaterHub Automated Tasks - Configure your monitoring preferences
           </p>
@@ -111,16 +108,16 @@
       <main class="options-main">
         <!-- Tab Navigation -->
         <div class="tabs-container">
-        <div class="tabs">
-          <button class="tab-btn active" data-tab="main-settings">
-            <span class="tab-icon">⚙️</span>
-            Main Settings
-          </button>
-          <button class="tab-btn" data-tab="notifications">
-            <span class="tab-icon">🔔</span>
-            Notifications
-          </button>
-        </div>
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="main-settings">
+              <span class="tab-icon">⚙️</span>
+              Main Settings
+            </button>
+            <button class="tab-btn" data-tab="notifications">
+              <span class="tab-icon">🔔</span>
+              Notifications
+            </button>
+          </div>
         </div>
 
         <!-- Main Settings Tab -->
@@ -136,73 +133,119 @@
             <div class="settings-grid">
               <div class="setting-card">
                 <div class="setting-header">
-              <h3 class="setting-title">Monitor Status</h3>
-              <label class="toggle-switch large">
-                <input type="checkbox" id="enabledToggle" />
-                <span class="slider"></span>
-              </label>
-            </div>
-            <!-- Removed description for compactness -->
-            <div class="status-indicator">
-              <div class="status-dot" id="statusDot"></div>
-              <span id="statusText">Disabled</span>
-            </div>
-          </div>
+                  <h3 class="setting-title">Monitor Status</h3>
+                  <label class="toggle-switch large">
+                    <input type="checkbox" id="enabledToggle" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <!-- Removed description for compactness -->
+                <div class="status-indicator">
+                  <div class="status-dot" id="statusDot"></div>
+                  <span id="statusText">Disabled</span>
+                </div>
+              </div>
 
               <div class="setting-card">
                 <div class="setting-header">
-              <h3 class="setting-title">Dark mode</h3>
-              <label class="toggle-switch">
-                <input type="checkbox" id="themeToggle" />
-                <span class="slider"></span>
-              </label>
-            </div>
-            <!-- Removed description for compactness -->
-            <div class="status-indicator">
-              <div class="status-dot" id="themeStatusDot"></div>
-              <span id="themeStatusText">Light Mode</span>
-            </div>
-          </div>
-
-          <div class="setting-card" style="width: fit-content; min-width: 200px;">
-            <div class="setting-header" style="display: flex; flex-direction: column; gap: 8px; padding: 12px 16px;">
-              <h3 class="setting-title" style="margin: 0; align-self: flex-start;">Operation Mode</h3>
-              <div class="mode-selector" style="display: flex; gap: 16px; margin: 0; align-self: flex-start;">
-                <label class="radio-option" style="display: flex; align-items: center; gap: 4px; margin: 0; font-size: 13px;">
-                  <input
-                    type="radio"
-                    name="mode"
-                    value="alarm_only"
-                    id="alarmOnlyMode"
-                  />
-                  <span class="radio-custom"></span>
-                  <div class="radio-content" style="margin: 0;">
-                    <strong>Alarm only</strong>
-                  </div>
-                </label>
-                <label class="radio-option" style="display: flex; align-items: center; gap: 4px; margin: 0; font-size: 13px;">
-                  <input
-                    type="radio"
-                    name="mode"
-                    value="alarm_and_click"
-                    id="alarmAndClickMode"
-                  />
-                  <span class="radio-custom"></span>
-                  <div class="radio-content" style="margin: 0;">
-                    <strong>Alarm & acquire</strong>
-                  </div>
-                </label>
+                  <h3 class="setting-title">Dark mode</h3>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="themeToggle" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <!-- Removed description for compactness -->
+                <div class="status-indicator">
+                  <div class="status-dot" id="themeStatusDot"></div>
+                  <span id="themeStatusText">Light Mode</span>
+                </div>
               </div>
-            </div>
-          </div>
+
+              <div
+                class="setting-card"
+                style="width: fit-content; min-width: 200px"
+              >
+                <div
+                  class="setting-header"
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    padding: 12px 16px;
+                  "
+                >
+                  <h3
+                    class="setting-title"
+                    style="margin: 0; align-self: flex-start"
+                  >
+                    Operation Mode
+                  </h3>
+                  <div
+                    class="mode-selector"
+                    style="
+                      display: flex;
+                      gap: 16px;
+                      margin: 0;
+                      align-self: flex-start;
+                    "
+                  >
+                    <label
+                      class="radio-option"
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                        margin: 0;
+                        font-size: 13px;
+                      "
+                    >
+                      <input
+                        type="radio"
+                        name="mode"
+                        value="alarm_only"
+                        id="alarmOnlyMode"
+                      />
+                      <span class="radio-custom"></span>
+                      <div class="radio-content" style="margin: 0">
+                        <strong>Alarm only</strong>
+                      </div>
+                    </label>
+                    <label
+                      class="radio-option"
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                        margin: 0;
+                        font-size: 13px;
+                      "
+                    >
+                      <input
+                        type="radio"
+                        name="mode"
+                        value="alarm_and_click"
+                        id="alarmAndClickMode"
+                      />
+                      <span class="radio-custom"></span>
+                      <div class="radio-content" style="margin: 0">
+                        <strong>Alarm & acquire</strong>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
 
               <div class="setting-card">
                 <div class="setting-header">
                   <h3 class="setting-title">Refresh Interval</h3>
                   <div class="interval-selector">
                     <div class="interval-options">
-                      <button class="interval-btn" data-value="0.5">0.5s</button>
-                      <button class="interval-btn active" data-value="1">1s</button>
+                      <button class="interval-btn" data-value="0.5">
+                        0.5s
+                      </button>
+                      <button class="interval-btn active" data-value="1">
+                        1s
+                      </button>
                       <button class="interval-btn" data-value="2">2s</button>
                       <button class="interval-btn" data-value="5">5s</button>
                       <button class="interval-btn" data-value="10">10s</button>
@@ -213,10 +256,8 @@
                       Currently refreshing every
                       <span id="currentInterval">1</span> second(s)
                     </p>
-
                   </div>
                 </div>
-
               </div>
 
               <div class="setting-card">
@@ -232,34 +273,78 @@
                       <option value="url">Online audio link</option>
                     </select>
                   </div>
-                  
+
                   <div id="soundSourceControls">
-                    <div id="fileInputContainer" class="file-input-container" style="display: none;">
-                      <label for="alertSoundFile" class="file-input-label">Choose MP3 file:</label>
+                    <div
+                      id="fileInputContainer"
+                      class="file-input-container"
+                      style="display: none"
+                    >
+                      <label for="alertSoundFile" class="file-input-label"
+                        >Choose MP3 file:</label
+                      >
                       <div class="file-input-wrapper">
-                        <input type="file" id="alertSoundFile" accept="audio/mp3,audio/mpeg" class="file-input" />
+                        <input
+                          type="file"
+                          id="alertSoundFile"
+                          accept="audio/mp3,audio/mpeg"
+                          class="file-input"
+                        />
+                        <span
+                          id="selectedFileName"
+                          class="selected-file-name"
+                          style="
+                            display: none;
+                            margin-left: 10px;
+                            font-size: 12px;
+                            color: var(--text-secondary);
+                          "
+                        ></span>
                       </div>
                     </div>
-                    
-                    <div id="urlInputContainer" class="url-input-container" style="display: none;">
-                      <label for="alertSoundUrl" class="url-input-label">MP3 URL:</label>
-                      <input type="text" id="alertSoundUrl" class="styled-select url-input" placeholder="Paste direct MP3 URL here (must end with .mp3)" pattern=".*\.mp3$" />
+
+                    <div
+                      id="urlInputContainer"
+                      class="url-input-container"
+                      style="display: none"
+                    >
+                      <label for="alertSoundUrl" class="url-input-label"
+                        >MP3 URL:</label
+                      >
+                      <input
+                        type="text"
+                        id="alertSoundUrl"
+                        class="styled-select url-input"
+                        placeholder="Paste direct MP3 URL here (must end with .mp3)"
+                        pattern=".*\.mp3$"
+                      />
                     </div>
                   </div>
-                  
+
                   <div class="spacer-md"></div>
                   <div class="sound-controls">
-                    <button id="playPauseSoundBtn" class="btn btn-secondary" title="Play/Pause">
+                    <button
+                      id="playPauseSoundBtn"
+                      class="btn btn-secondary"
+                      title="Play/Pause"
+                    >
                       <span id="playPauseIcon" class="sound-icon">&#9654;</span>
                     </button>
-                    <button id="stopSoundBtn" class="btn btn-outline" title="Stop">
+                    <button
+                      id="stopSoundBtn"
+                      class="btn btn-outline"
+                      title="Stop"
+                    >
                       <span class="sound-icon">&#9632;</span>
                     </button>
                   </div>
-                  
-                  <div id="soundErrorMsg" class="error-message" style="display: none;"></div>
-                </div>
 
+                  <div
+                    id="soundErrorMsg"
+                    class="error-message"
+                    style="display: none"
+                  ></div>
+                </div>
               </div>
             </div>
           </section>
@@ -282,7 +367,8 @@
                   </label>
                 </div>
                 <p class="setting-description">
-                  Show browser notifications when tasks become available or incomplete tasks are detected
+                  Show browser notifications when tasks become available or
+                  incomplete tasks are detected
                 </p>
               </div>
 
@@ -295,7 +381,8 @@
                   </label>
                 </div>
                 <p class="setting-description">
-                  Automatically stop alarm sounds when mouse movement is detected
+                  Automatically stop alarm sounds when mouse movement is
+                  detected
                 </p>
               </div>
             </div>
@@ -388,11 +475,14 @@
             <h3>Test Button</h3>
             <div class="setting-item">
               <label class="toggle-label">
-                <input type="checkbox" id="showTestButton">
+                <input type="checkbox" id="showTestButton" />
                 <span class="toggle-slider"></span>
                 Show test button on main page
               </label>
-              <p class="setting-description">Enable to show a test button that simulates finding an acquire button for testing purposes.</p>
+              <p class="setting-description">
+                Enable to show a test button that simulates finding an acquire
+                button for testing purposes.
+              </p>
             </div>
           </div>
 
@@ -400,7 +490,7 @@
             <h3>Reset to Defaults</h3>
             <button id="resetBtn" class="reset-btn">Reset All Settings</button>
           </div>
-          
+
           <div class="save-status">
             <span id="saveStatus" class="save-message"
               >Settings saved automatically</span

@@ -18,21 +18,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   const soundErrorMsg = document.getElementById("soundErrorMsg");
   let testAudio = null;
   let isPlaying = false;
-  
+
   // New settings elements
-  const desktopNotificationsToggle = document.getElementById("desktopNotificationsToggle");
+  const desktopNotificationsToggle = document.getElementById(
+    "desktopNotificationsToggle"
+  );
   const mouseMovementToggle = document.getElementById("mouseMovementToggle");
-  const incompleteTasksToggle = document.getElementById("incompleteTasksToggle");
+  const incompleteTasksToggle = document.getElementById(
+    "incompleteTasksToggle"
+  );
   const errorDetectionToggle = document.getElementById("errorDetectionToggle");
   const themeToggle = document.getElementById("themeToggle");
   const themeStatusDot = document.getElementById("themeStatusDot");
   const themeStatusText = document.getElementById("themeStatusText");
 
-
-
   // Apply dark theme immediately on load (default)
   updateThemeStatus(true);
-  
+
   // Load current settings (will override theme if different)
   loadSettings();
 
@@ -49,71 +51,107 @@ document.addEventListener("DOMContentLoaded", async () => {
   resetBtn.addEventListener("click", handleReset);
   playPauseSoundBtn.addEventListener("click", handlePlayPauseSound);
   stopSoundBtn.addEventListener("click", handleStopSound);
-  
+
   // Test button toggle
-  document.getElementById("showTestButton").addEventListener("change", handleShowTestButtonChange);
-  
+  document
+    .getElementById("showTestButton")
+    .addEventListener("change", handleShowTestButtonChange);
+
   // Sound source select
-  document.getElementById("soundSourceSelect").addEventListener("change", updateSoundSourceSection);
-  
+  document
+    .getElementById("soundSourceSelect")
+    .addEventListener("change", updateSoundSourceSection);
+
   // Sound input event listeners
   alertSoundFile.addEventListener("change", handleFileChange);
   alertSoundUrl.addEventListener("input", handleUrlChange);
-  
+
   // New settings event listeners
-  desktopNotificationsToggle.addEventListener("change", handleDesktopNotificationsChange);
+  desktopNotificationsToggle.addEventListener(
+    "change",
+    handleDesktopNotificationsChange
+  );
   mouseMovementToggle.addEventListener("change", handleMouseMovementChange);
   incompleteTasksToggle.addEventListener("change", handleIncompleteTasksChange);
   errorDetectionToggle.addEventListener("change", handleErrorDetectionChange);
   themeToggle.addEventListener("change", handleThemeChange);
 
   function loadSettings() {
-    chrome.storage.sync.get([
-      "enabled",
-      "mode",
-      "refreshInterval",
-      "alertSoundType",
-      "alertSoundData",
-      "showTestButton",
-      "enableDesktopNotifications",
-      "enableMouseMovementDetection",
-      "enableIncompleteTasksHandling",
-      "enableErrorDetection",
-      "darkThemeEnabled"
-    ], (data) => {
-      // Update UI elements
-      const enabled = data.enabled || false;
-      document.getElementById("enabledToggle").checked = enabled;
-      updateStatus(enabled); // Update status text and dot to match toggle state
+    chrome.storage.sync.get(
+      [
+        "enabled",
+        "mode",
+        "refreshInterval",
+        "alertSoundType",
+        "alertSoundData",
+        "alertSoundFileName",
+        "showTestButton",
+        "enableDesktopNotifications",
+        "enableMouseMovementDetection",
+        "enableIncompleteTasksHandling",
+        "enableErrorDetection",
+        "darkThemeEnabled",
+      ],
+      (data) => {
+        // Update UI elements
+        const enabled = data.enabled || false;
+        document.getElementById("enabledToggle").checked = enabled;
+        updateStatus(enabled); // Update status text and dot to match toggle state
 
-      // Update radio buttons based on mode
-      if (data.mode === "alarm_and_click") {
-        alarmAndClickMode.checked = true;
-      } else {
-        alarmOnlyMode.checked = true;
+        // Update radio buttons based on mode
+        if (data.mode === "alarm_and_click") {
+          alarmAndClickMode.checked = true;
+        } else {
+          alarmOnlyMode.checked = true;
+        }
+
+        // Update interval buttons and display
+        updateIntervalButtons(data.refreshInterval || 1);
+        currentIntervalSpan.textContent = data.refreshInterval || 1;
+
+        // Update sound source
+        document.getElementById("soundSourceSelect").value =
+          data.alertSoundType || "default";
+        document.getElementById("showTestButton").checked =
+          data.showTestButton || false;
+
+        // Load persistent file name only if sound source is file and name exists
+        if (data.alertSoundType === "file" && data.alertSoundFileName) {
+          updateSelectedFileName(data.alertSoundFileName);
+        } else {
+          updateSelectedFileName("");
+          // Ensure storage is updated to reflect the reset if not already empty
+          if (data.alertSoundFileName) {
+            chrome.storage.sync.set({ alertSoundFileName: "" });
+          }
+        }
+
+        // Update new settings
+        desktopNotificationsToggle.checked =
+          data.enableDesktopNotifications !== undefined
+            ? data.enableDesktopNotifications
+            : true;
+        mouseMovementToggle.checked =
+          data.enableMouseMovementDetection !== undefined
+            ? data.enableMouseMovementDetection
+            : true;
+        incompleteTasksToggle.checked =
+          data.enableIncompleteTasksHandling !== undefined
+            ? data.enableIncompleteTasksHandling
+            : true;
+        errorDetectionToggle.checked =
+          data.enableErrorDetection !== undefined
+            ? data.enableErrorDetection
+            : true;
+
+        // Update theme toggle
+        themeToggle.checked = data.darkThemeEnabled || false;
+        updateThemeStatus(data.darkThemeEnabled || false);
+
+        // Update sound source section visibility
+        updateSoundSourceSection();
       }
-
-      // Update interval buttons and display
-      updateIntervalButtons(data.refreshInterval || 1);
-      currentIntervalSpan.textContent = data.refreshInterval || 1;
-
-      // Update sound source
-      document.getElementById("soundSourceSelect").value = data.alertSoundType || "default";
-      document.getElementById("showTestButton").checked = data.showTestButton || false;
-
-      // Update new settings
-      desktopNotificationsToggle.checked = data.enableDesktopNotifications !== undefined ? data.enableDesktopNotifications : true;
-      mouseMovementToggle.checked = data.enableMouseMovementDetection !== undefined ? data.enableMouseMovementDetection : true;
-      incompleteTasksToggle.checked = data.enableIncompleteTasksHandling !== undefined ? data.enableIncompleteTasksHandling : true;
-      errorDetectionToggle.checked = data.enableErrorDetection !== undefined ? data.enableErrorDetection : true;
-
-      // Update theme toggle
-      themeToggle.checked = data.darkThemeEnabled || false;
-      updateThemeStatus(data.darkThemeEnabled || false);
-
-      // Update sound source section visibility
-      updateSoundSourceSection();
-    });
+    );
   }
 
   function updateStatus(enabled) {
@@ -130,11 +168,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (isDarkTheme) {
       themeStatusDot.className = "status-dot active";
       themeStatusText.textContent = "Dark Mode";
-      document.documentElement.setAttribute('data-theme', 'dark');
+      document.documentElement.setAttribute("data-theme", "dark");
     } else {
       themeStatusDot.className = "status-dot";
       themeStatusText.textContent = "Light Mode";
-      document.documentElement.setAttribute('data-theme', 'light');
+      document.documentElement.setAttribute("data-theme", "light");
     }
   }
 
@@ -169,15 +207,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateStatus(enabled);
       showSaveStatus();
       notifyContentScript();
-      
+
       // Notify popup about the specific setting change
-      chrome.runtime.sendMessage({ 
-        action: "settingChanged", 
-        setting: "enabled", 
-        value: enabled 
-      }).catch(() => {
-        // Ignore errors if popup is not open
-      });
+      chrome.runtime
+        .sendMessage({
+          action: "settingChanged",
+          setting: "enabled",
+          value: enabled,
+        })
+        .catch(() => {
+          // Ignore errors if popup is not open
+        });
     });
   }
 
@@ -186,15 +226,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     chrome.storage.sync.set({ mode }, () => {
       showSaveStatus();
       notifyContentScript();
-      
+
       // Notify popup about the specific setting change
-      chrome.runtime.sendMessage({ 
-        action: "settingChanged", 
-        setting: "mode", 
-        value: mode 
-      }).catch(() => {
-        // Ignore errors if popup is not open
-      });
+      chrome.runtime
+        .sendMessage({
+          action: "settingChanged",
+          setting: "mode",
+          value: mode,
+        })
+        .catch(() => {
+          // Ignore errors if popup is not open
+        });
     });
   }
 
@@ -217,15 +259,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     chrome.storage.sync.set({ refreshInterval: interval }, () => {
       showSaveStatus();
       notifyContentScript();
-      
+
       // Notify popup about the specific setting change
-      chrome.runtime.sendMessage({ 
-        action: "settingChanged", 
-        setting: "refreshInterval", 
-        value: interval 
-      }).catch(() => {
-        // Ignore errors if popup is not open
-      });
+      chrome.runtime
+        .sendMessage({
+          action: "settingChanged",
+          setting: "refreshInterval",
+          value: interval,
+        })
+        .catch(() => {
+          // Ignore errors if popup is not open
+        });
     });
   }
 
@@ -269,12 +313,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       refreshInterval: 10,
       alertSoundType: "default",
       alertSoundData: "",
+      alertSoundFileName: "",
       showTestButton: false,
       enableDesktopNotifications: true,
       enableMouseMovementDetection: true,
       enableIncompleteTasksHandling: true,
       enableErrorDetection: true,
-      darkThemeEnabled: true
+      darkThemeEnabled: true,
     };
     chrome.storage.sync.set(defaultSettings, () => {
       loadSettings();
@@ -287,7 +332,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   function handlePlayPauseSound() {
     soundErrorMsg.style.display = "none";
     chrome.storage.sync.get(["alertSoundType", "alertSoundData"], (data) => {
-      if (data.alertSoundType === "default") {
+      const soundType = data.alertSoundType || "default";
+
+      if (soundType === "default") {
         // Play default alarm sound from extension
         if (!testAudio) {
           testAudio = new Audio(chrome.runtime.getURL("alarm.mp3"));
@@ -305,10 +352,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           isPlaying = true;
           playPauseIcon.innerHTML = "&#10073;&#10073;";
         }
-      } else if (data.alertSoundType === "file") {
+      } else if (soundType === "file") {
         chrome.storage.local.get(["alertSoundData"], (localData) => {
           if (!localData.alertSoundData) {
-            soundErrorMsg.textContent = "No MP3 file selected.";
+            soundErrorMsg.textContent =
+              "No MP3 file selected. Please choose a file first.";
             soundErrorMsg.style.display = "block";
             return;
           }
@@ -329,7 +377,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             playPauseIcon.innerHTML = "&#10073;&#10073;";
           }
         });
-      } else if (data.alertSoundType === "url" && data.alertSoundData) {
+      } else if (soundType === "url") {
+        if (!data.alertSoundData) {
+          soundErrorMsg.textContent =
+            "No URL provided. Please enter a valid MP3 URL first.";
+          soundErrorMsg.style.display = "block";
+          return;
+        }
         if (!data.alertSoundData.match(/\.mp3($|\?)/i)) {
           soundErrorMsg.textContent = "URL must end with .mp3";
           soundErrorMsg.style.display = "block";
@@ -351,9 +405,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           isPlaying = true;
           playPauseIcon.innerHTML = "&#10073;&#10073;";
         }
-      } else {
-        soundErrorMsg.textContent = "No sound file or link selected.";
-        soundErrorMsg.style.display = "block";
       }
     });
   }
@@ -390,11 +441,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       const reader = new FileReader();
       reader.onload = function (e) {
         const fileData = e.target.result;
-        // Store in both sync and local storage for reliability
+        // Store in local storage only for reliability
         chrome.storage.local.set({ alertSoundData: fileData }, () => {
+          // Update sync storage with file type and persistent file name
           chrome.storage.sync.set(
-            { alertSoundType: "file", alertSoundData: fileData },
+            {
+              alertSoundType: "file",
+              alertSoundFileName: file.name,
+            },
             () => {
+              updateSelectedFileName(file.name);
               showSaveStatus("Sound file saved!", "success");
               notifyContentScript(); // Notify popup about the change
             }
@@ -402,6 +458,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
       };
       reader.readAsDataURL(file);
+    } else {
+      // Handle case when no file is selected (clear selection)
+      chrome.storage.local.set({ alertSoundData: "" });
+      chrome.storage.sync.set({
+        alertSoundType: "file",
+        alertSoundFileName: "",
+      });
+      updateSelectedFileName("");
+      showSaveStatus("Sound file cleared!", "success");
+      notifyContentScript();
     }
   }
 
@@ -415,7 +481,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
       chrome.storage.sync.set(
-        { alertSoundType: "url", alertSoundData: url },
+        { alertSoundType: "url", alertSoundData: url, alertSoundFileName: "" },
         () => {
           showSaveStatus("Sound URL saved!", "success");
           notifyContentScript(); // Notify popup about the change
@@ -424,7 +490,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       // If URL is empty, revert to default
       chrome.storage.sync.set(
-        { alertSoundType: "default", alertSoundData: "" },
+        {
+          alertSoundType: "default",
+          alertSoundData: "",
+          alertSoundFileName: "",
+        },
         () => {
           showSaveStatus("Default sound will be used.", "success");
           notifyContentScript(); // Notify popup about the change
@@ -440,18 +510,42 @@ document.addEventListener("DOMContentLoaded", async () => {
     const urlInputContainer = document.getElementById("urlInputContainer");
     const alertSoundFile = document.getElementById("alertSoundFile");
     const alertSoundUrl = document.getElementById("alertSoundUrl");
-    
+
     // Hide all containers first
     fileInputContainer.style.display = "none";
     urlInputContainer.style.display = "none";
-    
+
     // Show appropriate container based on selection
     if (soundSourceSelect.value === "file") {
       fileInputContainer.style.display = "block";
       alertSoundUrl.value = ""; // Clear URL when switching to file
+      // Load file name from storage if available
+      chrome.storage.sync.get(["alertSoundFileName"], (data) => {
+        if (data.alertSoundFileName) {
+          updateSelectedFileName(data.alertSoundFileName);
+        } else {
+          updateSelectedFileName("");
+        }
+      });
     } else if (soundSourceSelect.value === "url") {
       urlInputContainer.style.display = "block";
       alertSoundFile.value = ""; // Clear file when switching to URL
+      // Clear file name when switching to URL
+      updateSelectedFileName("");
+    } else {
+      // Clear file name when switching to default
+      updateSelectedFileName("");
+    }
+  }
+
+  function updateSelectedFileName(fileName) {
+    const fileInputLabel = document.querySelector(
+      'label[for="alertSoundFile"]'
+    );
+    if (fileName) {
+      fileInputLabel.textContent = fileName;
+    } else {
+      fileInputLabel.textContent = "Choose MP3 file";
     }
   }
 
@@ -465,14 +559,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     chrome.storage.sync.set({ darkThemeEnabled }, () => {
       updateThemeStatus(darkThemeEnabled);
       showSaveStatus();
-      
+
       // Notify all parts of the extension about theme change
-      chrome.runtime.sendMessage({ 
-        action: "themeChanged", 
-        darkThemeEnabled 
-      }).catch(() => {
-        // Ignore errors if no other pages are open
-      });
+      chrome.runtime
+        .sendMessage({
+          action: "themeChanged",
+          darkThemeEnabled,
+        })
+        .catch(() => {
+          // Ignore errors if no other pages are open
+        });
     });
   }
 
@@ -489,7 +585,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
       }
     );
-    
+
     // Also notify the popup if it's open
     chrome.runtime.sendMessage({ action: "settingsUpdated" }).catch(() => {
       // Ignore errors if popup is not open
@@ -501,66 +597,67 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function handleRuntimeMessage(message, sender, sendResponse) {
     console.log("Options received message:", message.action, message);
-    
-    if (message.action === 'settingsUpdated') {
+
+    if (message.action === "settingsUpdated") {
       // Reload settings to update UI
       loadSettings();
-    } else if (message.action === 'themeChanged') {
+    } else if (message.action === "themeChanged") {
       // Update theme based on message from popup
       updateThemeStatus(message.darkThemeEnabled);
       themeToggle.checked = message.darkThemeEnabled;
-      
+
       // If this theme change came from another source, update storage to stay in sync
       if (sender.id !== chrome.runtime.id) {
         chrome.storage.sync.set({ darkThemeEnabled: message.darkThemeEnabled });
       }
-    } else if (message.action === 'settingChanged') {
+    } else if (message.action === "settingChanged") {
       // Handle individual setting changes for real-time synchronization
       console.log(`Setting changed: ${message.setting} = ${message.value}`);
-      
+
       // Update the specific setting in the UI
       switch (message.setting) {
-        case 'enabled':
+        case "enabled":
           enabledToggle.checked = message.value;
           updateStatus(message.value);
           break;
-        case 'mode':
-          if (message.value === 'alarm_only') {
+        case "mode":
+          if (message.value === "alarm_only") {
             alarmOnlyMode.checked = true;
           } else {
             alarmAndClickMode.checked = true;
           }
           break;
-        case 'refreshInterval':
+        case "refreshInterval":
           updateIntervalButtons(message.value);
           currentIntervalSpan.textContent = message.value;
           break;
-        case 'darkThemeEnabled':
+        case "darkThemeEnabled":
           themeToggle.checked = message.value;
           updateThemeStatus(message.value);
           break;
-        case 'alertSoundType':
+        case "alertSoundType":
           document.getElementById("soundSourceSelect").value = message.value;
           updateSoundSourceSection();
           break;
-        case 'alertSoundData':
+        case "alertSoundData":
           if (document.getElementById("soundSourceSelect").value === "url") {
             alertSoundUrl.value = message.value;
           }
           break;
-        case 'showTestButton':
+
+        case "showTestButton":
           document.getElementById("showTestButton").checked = message.value;
           break;
-        case 'enableDesktopNotifications':
+        case "enableDesktopNotifications":
           desktopNotificationsToggle.checked = message.value;
           break;
-        case 'enableMouseMovementDetection':
+        case "enableMouseMovementDetection":
           mouseMovementToggle.checked = message.value;
           break;
-        case 'enableIncompleteTasksHandling':
+        case "enableIncompleteTasksHandling":
           incompleteTasksToggle.checked = message.value;
           break;
-        case 'enableErrorDetection':
+        case "enableErrorDetection":
           errorDetectionToggle.checked = message.value;
           break;
       }
@@ -568,9 +665,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     return true; // Keep message channel open for async response
   }
 
-
   // Analytics functionality removed
-
 });
-
-
