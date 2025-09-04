@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RHAT</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="popup">
+    <div class="popup-container">
+      <h2 class="popup-title">RHAT</h2>
+
+      <!-- Top controls section for Enable and Dark Mode -->
+      <div class="top-controls-section">
+        <div class="top-control-group">
+          <label class="toggle-switch">
+            <input type="checkbox" id="enabledToggle" />
+            <span class="slider"></span>
+          </label>
+          <span class="control-label">Enable</span>
+        </div>
+        <div class="top-control-group">
+          <label class="toggle-switch">
+            <input type="checkbox" id="themeToggle" />
+            <span class="slider"></span>
+          </label>
+          <span class="control-label">Dark Mode</span>
+        </div>
+      </div>
+
+      <div class="controls-section">
+        <div class="settings-card">
+          <div class="control-group">
+            <label for="modeSelect" class="control-label">Mode:</label>
+            <select id="modeSelect" class="styled-select">
+              <option value="alarm_only">Alarm only</option>
+              <option value="alarm_and_click">Alarm & acquire</option>
+            </select>
+          </div>
+          <div class="spacer-sm"></div>
+          <div class="control-group">
+            <label for="intervalSelect" class="control-label"
+              >Refresh Interval:</label
+            >
+            <select id="intervalSelect" class="styled-select">
+              <option value="0.5">0.5 second</option>
+              <option value="1" selected>1 second</option>
+              <option value="2">2 seconds</option>
+              <option value="5">5 seconds</option>
+              <option value="10">10 seconds</option>
+              <option value="30">30 seconds</option>
+              <option value="60">60 seconds</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions-section">
+        <button id="openOptionsBtn" class="btn btn-secondary">
+          ⚙️ More Settings
+        </button>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+  <div style="height: 4px"></div>
+</html>
