@@ -1,5 +1,8 @@
 // Background script for RaterHub Task Monitor
 
+// Import Gmail services (these will be available in the service worker context)
+importScripts("auth-service.js", "gmail-service.js", "email-templates.js");
+
 // Initialize default settings
 chrome.runtime.onInstalled.addListener(() => {
   const defaultSettings = {
@@ -14,6 +17,10 @@ chrome.runtime.onInstalled.addListener(() => {
     enableIncompleteTasksHandling: true, // Handle incomplete tasks
     enableErrorDetection: true, // Enable enhanced error detection
     darkThemeEnabled: true, // Dark theme setting
+    // Gmail integration settings
+    gmailNotificationsEnabled: false, // Enable Gmail notifications
+    notificationEmail: "", // Email address for notifications
+    gmailAuthStatus: "not_authenticated", // Authentication status
   };
 
   chrome.storage.sync.set(defaultSettings);
@@ -85,10 +92,17 @@ function sendMessageToTab(tabId, message) {
 // Create context menus
 function createContextMenus() {
   chrome.contextMenus.removeAll(() => {
+    // Define URL patterns for RaterHub pages
+    const raterHubUrlPatterns = [
+      "https://www.raterhub.com/evaluation/rater*",
+      "https://www.raterhub.com/evaluation/rater/task/*",
+    ];
+
     chrome.contextMenus.create({
       id: "raterhub-monitor",
       title: "RHAT",
       contexts: ["all"],
+      documentUrlPatterns: raterHubUrlPatterns,
     });
 
     chrome.contextMenus.create({
@@ -96,6 +110,7 @@ function createContextMenus() {
       title: "Enable/Disable Monitor",
       parentId: "raterhub-monitor",
       contexts: ["all"],
+      documentUrlPatterns: raterHubUrlPatterns,
     });
 
     chrome.contextMenus.create({
@@ -103,6 +118,7 @@ function createContextMenus() {
       type: "separator",
       parentId: "raterhub-monitor",
       contexts: ["all"],
+      documentUrlPatterns: raterHubUrlPatterns,
     });
 
     chrome.contextMenus.create({
@@ -111,6 +127,7 @@ function createContextMenus() {
       type: "radio",
       parentId: "raterhub-monitor",
       contexts: ["all"],
+      documentUrlPatterns: raterHubUrlPatterns,
     });
 
     chrome.contextMenus.create({
@@ -119,6 +136,7 @@ function createContextMenus() {
       type: "radio",
       parentId: "raterhub-monitor",
       contexts: ["all"],
+      documentUrlPatterns: raterHubUrlPatterns,
     });
 
     chrome.contextMenus.create({
@@ -126,6 +144,7 @@ function createContextMenus() {
       type: "separator",
       parentId: "raterhub-monitor",
       contexts: ["all"],
+      documentUrlPatterns: raterHubUrlPatterns,
     });
 
     const intervals = [0.5, 1, 2, 5, 10, 30, 60];
@@ -136,6 +155,7 @@ function createContextMenus() {
         type: "radio",
         parentId: "raterhub-monitor",
         contexts: ["all"],
+        documentUrlPatterns: raterHubUrlPatterns,
       });
     });
 
@@ -336,6 +356,41 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     );
 
+    return true;
+  }
+
+  // Handle audio playing requests from content script
+  if (message.action === "playAlarm") {
+    console.log("Background: Received playAlarm request from content script");
+    playAlarmInBackground();
+    return true;
+  }
+
+  // Handle stop alarm requests from content script
+  if (message.action === "stopAlarm") {
+    console.log("Background: Received stopAlarm request from content script");
+    stopAlarmInBackground();
+    return true;
+  }
+
+  // Handle task detection for Gmail notifications
+  if (message.action === "taskDetected") {
+    console.log("Background: Received task detection notification");
+    handleTaskDetected(message.taskData);
+    return true;
+  }
+
+  // Handle Gmail authentication requests
+  if (message.action === "gmailAuthenticate") {
+    console.log("Background: Received Gmail authentication request");
+    handleGmailAuthentication(sendResponse);
+    return true;
+  }
+
+  // Handle test email requests
+  if (message.action === "sendTestEmail") {
+    console.log("Background: Received test email request");
+    handleTestEmail(sendResponse);
     return true;
   }
 
@@ -649,6 +704,260 @@ function enhancedErrorDetection(tabId, url) {
     console.log("Performing error detection...");
     // Additional error detection logic can be added here if needed
   });
+}
+
+// Audio playing functions using offscreen document
+async function playAlarmInBackground() {
+  try {
+    console.log("Background: Requesting alarm playback via offscreen document");
+
+    // Get current settings to determine sound type
+    const settings = await new Promise((resolve) => {
+      chrome.storage.sync.get(["alertSoundType", "alertSoundData"], resolve);
+    });
+
+    console.log("Background: Sound settings:", {
+      alertSoundType: settings.alertSoundType,
+      alertSoundData: settings.alertSoundData,
+    });
+
+    // Ensure offscreen document is created
+    await createOffscreenDocument();
+
+    // Send message to offscreen document to play alarm
+    chrome.runtime.sendMessage(
+      {
+        action: "playAlarm",
+        settings: {
+          alertSoundType: settings.alertSoundType || "default",
+          alertSoundData: settings.alertSoundData || "",
+        },
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "Background: Error sending playAlarm to offscreen:",
+            chrome.runtime.lastError
+          );
+          createFallbackNotification();
+        } else {
+          console.log(
+            "Background: Alarm playback request sent to offscreen document"
+          );
+        }
+      }
+    );
+  } catch (error) {
+    console.error("Background: Error in playAlarmInBackground:", error);
+    createFallbackNotification();
+  }
+}
+
+function stopAlarmInBackground() {
+  try {
+    console.log("Background: Requesting alarm stop via offscreen document");
+
+    // Send message to offscreen document to stop alarm
+    chrome.runtime.sendMessage({ action: "stopAlarm" }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error(
+          "Background: Error sending stopAlarm to offscreen:",
+          chrome.runtime.lastError
+        );
+      } else {
+        console.log(
+          "Background: Alarm stop request sent to offscreen document"
+        );
+      }
+    });
+
+    // Also clear any existing notifications
+    chrome.notifications.getAll((notifications) => {
+      Object.keys(notifications).forEach((notificationId) => {
+        if (
+          notificationId.includes("raterhub") ||
+          notificationId.includes("RHAT") ||
+          notificationId.includes("Tasks Available")
+        ) {
+          chrome.notifications.clear(notificationId, (wasCleared) => {
+            if (wasCleared) {
+              console.log("Background: Cleared notification:", notificationId);
+            }
+          });
+        }
+      });
+    });
+  } catch (error) {
+    console.error("Background: Error stopping alarm:", error);
+  }
+}
+
+async function createOffscreenDocument() {
+  try {
+    // Check if offscreen document already exists
+    const existingContexts = await chrome.runtime.getContexts({
+      contextTypes: ["OFFSCREEN_DOCUMENT"],
+    });
+
+    if (existingContexts.length > 0) {
+      console.log("Background: Offscreen document already exists");
+      return;
+    }
+
+    console.log("Background: Creating offscreen document");
+
+    // Create offscreen document
+    await chrome.offscreen.createDocument({
+      url: "offscreen.html",
+      reasons: ["AUDIO_PLAYBACK"],
+      justification: "Handle audio playback for task notifications",
+    });
+
+    console.log("Background: Offscreen document created successfully");
+  } catch (error) {
+    console.error("Background: Error creating offscreen document:", error);
+    throw error;
+  }
+}
+
+function createFallbackNotification() {
+  // Create a simple notification as final fallback
+  chrome.notifications.create(
+    {
+      type: "basic",
+      iconUrl: chrome.runtime.getURL("icon.png"),
+      title: "RHAT - Tasks Available!",
+      message: "🎉 Tasks are available! Click to return to RaterHub.",
+      priority: 2,
+      requireInteraction: true,
+    },
+    (notificationId) => {
+      if (chrome.runtime.lastError) {
+        console.error(
+          "Background: Notification error:",
+          chrome.runtime.lastError
+        );
+      } else {
+        console.log(
+          "Background: Fallback notification created:",
+          notificationId
+        );
+      }
+    }
+  );
+}
+
+// Gmail integration functions
+async function handleTaskDetected(taskData) {
+  try {
+    console.log("Background: Handling task detection for Gmail notifications");
+
+    // Get Gmail settings
+    const settings = await new Promise((resolve) => {
+      chrome.storage.sync.get(
+        ["gmailNotificationsEnabled", "notificationEmail"],
+        resolve
+      );
+    });
+
+    if (!settings.gmailNotificationsEnabled || !settings.notificationEmail) {
+      console.log(
+        "Background: Gmail notifications disabled or no email configured"
+      );
+      return;
+    }
+
+    console.log(
+      "Background: Sending task notification email to:",
+      settings.notificationEmail
+    );
+
+    // Send the email using Gmail service
+    const result = await GmailService.sendTaskNotification(
+      taskData,
+      settings.notificationEmail
+    );
+
+    console.log(
+      "Background: Task notification email sent successfully:",
+      result.id
+    );
+
+    // Update last notification time
+    chrome.storage.sync.set({
+      lastNotificationTime: new Date().toISOString(),
+      lastNotificationEmail: settings.notificationEmail,
+    });
+  } catch (error) {
+    console.error("Background: Failed to send task notification email:", error);
+
+    // Handle authentication errors
+    if (
+      error.message.includes("invalid_grant") ||
+      error.message.includes("401")
+    ) {
+      console.log("Background: Gmail authentication error detected");
+      chrome.storage.sync.set({ gmailAuthStatus: "authentication_required" });
+    }
+  }
+}
+
+async function handleGmailAuthentication(sendResponse) {
+  try {
+    console.log("Background: Starting Gmail authentication");
+
+    const authResult = await AuthService.authenticate();
+
+    if (authResult) {
+      console.log("Background: Gmail authentication successful");
+      chrome.storage.sync.set({
+        gmailAuthStatus: "authenticated",
+        gmailAuthToken: authResult.access_token,
+      });
+      sendResponse({
+        success: true,
+        message: "Gmail authentication successful",
+      });
+    } else {
+      console.log("Background: Gmail authentication failed");
+      chrome.storage.sync.set({ gmailAuthStatus: "authentication_failed" });
+      sendResponse({ success: false, message: "Gmail authentication failed" });
+    }
+  } catch (error) {
+    console.error("Background: Gmail authentication error:", error);
+    chrome.storage.sync.set({ gmailAuthStatus: "authentication_error" });
+    sendResponse({ success: false, message: error.message });
+  }
+}
+
+async function handleTestEmail(sendResponse) {
+  try {
+    // Get the notification email from storage
+    const settings = await new Promise((resolve) => {
+      chrome.storage.sync.get(["notificationEmail"], resolve);
+    });
+
+    if (!settings.notificationEmail) {
+      sendResponse({
+        success: false,
+        message: "No notification email configured",
+      });
+      return;
+    }
+
+    console.log(
+      "Background: Sending test email to:",
+      settings.notificationEmail
+    );
+
+    const result = await GmailService.sendTestEmail(settings.notificationEmail);
+
+    console.log("Background: Test email sent successfully:", result.id);
+    sendResponse({ success: true, message: "Test email sent successfully" });
+  } catch (error) {
+    console.error("Background: Failed to send test email:", error);
+    sendResponse({ success: false, message: error.message });
+  }
 }
 
 // Clean up old analytics and filter storage keys

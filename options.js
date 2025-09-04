@@ -35,6 +35,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Apply dark theme immediately on load (default)
   updateThemeStatus(true);
 
+  // Initialize tab functionality
+  initializeTabs();
+
   // Load current settings (will override theme if different)
   loadSettings();
 
@@ -716,6 +719,156 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
     return true; // Keep message channel open for async response
+  }
+
+  // Tab switching functionality
+  function initializeTabs() {
+    const tabButtons = document.querySelectorAll(".tab-btn");
+    const tabContents = document.querySelectorAll(".tab-content");
+
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const targetTab = button.getAttribute("data-tab");
+
+        // Remove active class from all buttons and contents
+        tabButtons.forEach((btn) => btn.classList.remove("active"));
+        tabContents.forEach((content) => content.classList.remove("active"));
+
+        // Add active class to clicked button and corresponding content
+        button.classList.add("active");
+        const targetContent = document.getElementById(targetTab);
+        if (targetContent) {
+          targetContent.classList.add("active");
+        }
+      });
+    });
+
+    // Initialize Gmail notifications tab controls
+    initializeGmailNotificationsControls();
+  }
+
+  function initializeGmailNotificationsControls() {
+    const gmailToggle = document.getElementById("gmailNotificationsToggle");
+    const emailInput = document.getElementById("notificationEmailInput");
+    const authBtn = document.getElementById("gmailAuthBtn");
+    const authStatusDot = document.getElementById("gmailAuthStatusDot");
+    const authStatusText = document.getElementById("gmailAuthStatusText");
+    const testEmailBtn = document.getElementById("testEmailBtn");
+    const testEmailStatus = document.getElementById("testEmailStatus");
+    const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
+    const notificationHistory = document.getElementById("notificationHistory");
+
+    // Load initial settings
+    chrome.storage.sync.get(
+      ["enableGmailNotifications", "notificationEmail", "gmailAuthStatus"],
+      (data) => {
+        gmailToggle.checked = data.enableGmailNotifications || false;
+        emailInput.value = data.notificationEmail || "";
+        updateAuthStatusUI(data.gmailAuthStatus || "unauthenticated");
+      }
+    );
+
+    // Event listeners
+    gmailToggle.addEventListener("change", () => {
+      chrome.storage.sync.set({
+        enableGmailNotifications: gmailToggle.checked,
+      });
+    });
+
+    emailInput.addEventListener("input", () => {
+      chrome.storage.sync.set({ notificationEmail: emailInput.value });
+    });
+
+    authBtn.addEventListener("click", () => {
+      // Trigger Gmail authentication flow
+      chrome.runtime.sendMessage(
+        { action: "gmailAuthenticate" },
+        (response) => {
+          if (response && response.status) {
+            updateAuthStatusUI(response.status);
+          }
+        }
+      );
+    });
+
+    testEmailBtn.addEventListener("click", () => {
+      testEmailStatus.style.display = "none";
+      chrome.runtime.sendMessage({ action: "sendTestEmail" }, (response) => {
+        if (response && response.success) {
+          testEmailStatus.textContent = "Test email sent successfully.";
+          testEmailStatus.style.color = "green";
+        } else {
+          testEmailStatus.textContent = "Failed to send test email.";
+          testEmailStatus.style.color = "red";
+        }
+        testEmailStatus.style.display = "block";
+      });
+    });
+
+    refreshHistoryBtn.addEventListener("click", () => {
+      loadNotificationHistory();
+    });
+
+    // Load notification history initially
+    loadNotificationHistory();
+
+    function updateAuthStatusUI(status) {
+      if (status === "authenticated") {
+        authStatusDot.classList.add("active");
+        authStatusText.textContent = "Authenticated";
+        authBtn.disabled = true;
+      } else {
+        authStatusDot.classList.remove("active");
+        authStatusText.textContent = "Not Authenticated";
+        authBtn.disabled = false;
+      }
+    }
+
+    function loadNotificationHistory() {
+      chrome.storage.local.get(["notificationHistory"], (data) => {
+        const history = data.notificationHistory || [];
+        notificationHistory.innerHTML = "";
+
+        if (history.length === 0) {
+          notificationHistory.innerHTML = `
+            <div class="history-item">
+              <div class="history-content">
+                <div class="history-title">No notifications sent yet</div>
+                <div class="history-meta">Configure Gmail notifications to see history</div>
+              </div>
+            </div>`;
+          return;
+        }
+
+        history
+          .slice()
+          .reverse()
+          .forEach((item) => {
+            const itemDiv = document.createElement("div");
+            itemDiv.className = "history-item";
+
+            const contentDiv = document.createElement("div");
+            contentDiv.className = "history-content";
+
+            const titleDiv = document.createElement("div");
+            titleDiv.className = "history-title";
+            titleDiv.textContent = `Sent to ${item.email} at ${new Date(
+              item.timestamp
+            ).toLocaleString()}`;
+
+            const metaDiv = document.createElement("div");
+            metaDiv.className = "history-meta";
+            metaDiv.textContent = `Status: ${item.status}${
+              item.errorMessage ? " - " + item.errorMessage : ""
+            }`;
+
+            contentDiv.appendChild(titleDiv);
+            contentDiv.appendChild(metaDiv);
+            itemDiv.appendChild(contentDiv);
+            notificationHistory.appendChild(itemDiv);
+          });
+      });
+    }
   }
 
   // Analytics functionality removed

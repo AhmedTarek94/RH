@@ -5,9 +5,27 @@
   "description": "RaterHub Automated Tasks - Advanced Chrome extension with real-time synchronization, task monitoring, and notifications. Developed by Ahmed Tarek.",
   "author": "Ahmed Tarek",
 
-  "permissions": ["activeTab", "tabs", "storage", "contextMenus", "scripting"],
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "contextMenus",
+    "scripting",
+    "identity",
+    "notifications",
+    "tts",
+    "offscreen"
+  ],
 
-  "host_permissions": ["https://*.raterhub.com/*"],
+  "host_permissions": [
+    "https://*.raterhub.com/*",
+    "https://www.googleapis.com/*"
+  ],
+
+  "oauth2": {
+    "client_id": "YOUR_CLIENT_ID_HERE",
+    "scopes": ["https://www.googleapis.com/auth/gmail.send"]
+  },
 
   "background": {
     "service_worker": "background.js"

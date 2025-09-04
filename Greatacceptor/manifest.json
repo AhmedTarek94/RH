@@ -1,0 +1,26 @@
+{
+"update_url": "https://clients2.google.com/service/update2/crx",
+
+  "manifest_version": 2,
+  "name": "The Great Acceptor",
+  "version": "1.10",
+  "description": "Automatically accepts Leapforce tasks.",
+  "options_page": "options.html",
+  "permissions": [
+          "contextMenus",
+          "webRequest",
+          "notifications",
+          "tabs", "https://www.raterhub.com/evaluation/rater*"
+        ],
+   "icons": {
+        "16": "acceptor-icon16.png",
+        "48": "acceptor-icon48.png",
+        "128": "acceptor-icon128.png"
+   },
+   "background": {
+    "scripts": ["background.js"]
+  },
+  "browser_action": {
+    "default_icon": "acceptor-icon16.png"
+  }
+}

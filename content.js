@@ -384,17 +384,62 @@ if (window.raterHubMonitorLoaded) {
         acquireButton.href || "No href"
       );
 
+      // Send task detection notification to background script for Gmail notifications
+      const taskData = {
+        timestamp: new Date().toISOString(),
+        url: window.location.href,
+        buttonText:
+          acquireButton.textContent ||
+          acquireButton.value ||
+          "Acquire if available",
+        buttonHref: acquireButton.href || "No href",
+        mode: currentSettings.mode,
+      };
+
+      console.log(
+        "RaterHub Monitor: Sending task detection notification to background"
+      );
+      chrome.runtime.sendMessage(
+        {
+          action: "taskDetected",
+          taskData: taskData,
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "RaterHub Monitor: Error sending task detection message:",
+              chrome.runtime.lastError
+            );
+          } else {
+            console.log(
+              "RaterHub Monitor: Task detection notification sent successfully"
+            );
+          }
+        }
+      );
+
       console.log("RaterHub Monitor: Stopping monitoring and playing alarm...");
       stopMonitoring(); // Stop monitoring immediately
 
+      // Play alarm immediately when task is detected
+      console.log(
+        "RaterHub Monitor: Playing alarm immediately on task detection"
+      );
+      playAlarm();
+
       if (currentSettings.mode === "alarm_and_click") {
-        // Click the acquire button instantly first, then set flag for alarm after page load
-        console.log("RaterHub Monitor: Auto-clicking acquire button instantly");
+        // Set flag to continue alarm after page navigation
+        sessionStorage.setItem("raterhub_continue_alarm", "true");
+        sessionStorage.setItem(
+          "raterhub_alarm_timestamp",
+          Date.now().toString()
+        );
 
-        // Set flag to play alarm after page navigation
-        sessionStorage.setItem("raterhub_pending_alarm", "true");
+        console.log(
+          "RaterHub Monitor: Auto-clicking acquire button after alarm starts"
+        );
 
-        // Small delay to ensure button is fully ready
+        // Small delay to ensure button is fully ready and alarm has started
         setTimeout(() => {
           try {
             // Try standard click first
@@ -431,13 +476,12 @@ if (window.raterHubMonitorLoaded) {
               );
             }
           }
-        }, 50); // 50ms delay to ensure button is ready
+        }, 200); // 200ms delay to ensure alarm has started
       } else {
-        // Alarm only mode - just play alarm
+        // Alarm only mode - alarm already played above
         console.log(
-          "RaterHub Monitor: Alarm only mode - not auto-clicking button"
+          "RaterHub Monitor: Alarm only mode - alarm played, no auto-click"
         );
-        playAlarm();
       }
     } else if (!noTasksExists && !acquireButton) {
       // Page might be in a different state - don't refresh, just wait for next interval
@@ -763,112 +807,117 @@ if (window.raterHubMonitorLoaded) {
 
   async function playAlarm() {
     try {
-      // Stop any existing alarm first
-      stopAlarm();
+      console.log("RaterHub Monitor: Requesting background to play alarm");
 
-      let audioUrl;
-
-      if (
-        currentSettings.alertSoundType === "file" &&
-        currentSettings.alertSoundData
-      ) {
-        // Play custom file sound
-        audioUrl = currentSettings.alertSoundData;
-      } else if (
-        currentSettings.alertSoundType === "url" &&
-        currentSettings.alertSoundData
-      ) {
-        // Play URL sound
-        audioUrl = currentSettings.alertSoundData;
-      } else {
-        // Play default alarm
-        audioUrl = chrome.runtime.getURL("alarm.mp3");
-      }
-
-      // Create and play audio
-      currentAudio = new Audio(audioUrl);
-      currentAudio.volume = 1.0;
-      currentAudio.loop = false;
-
-      // Add event listeners for better error handling
-      currentAudio.addEventListener("canplaythrough", () => {
-        console.log("RaterHub Monitor: Audio can play through");
-      });
-
-      currentAudio.addEventListener("error", (e) => {
-        console.error("RaterHub Monitor: Audio error:", e);
-        // Fallback to default alarm if custom sound fails
-        if (currentSettings.alertSoundType !== "default") {
-          console.log("RaterHub Monitor: Falling back to default alarm");
-          playDefaultAlarm();
+      // Send message to background script to play alarm
+      chrome.runtime.sendMessage({ action: "playAlarm" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "RaterHub Monitor: Error sending playAlarm message:",
+            chrome.runtime.lastError
+          );
+          // Fallback to direct audio playing if background fails
+          playAlarmDirectly();
         } else {
-          fallbackBeep();
+          console.log(
+            "RaterHub Monitor: Background alarm request sent successfully"
+          );
+
+          // Show desktop notification if enabled
+          if (currentSettings.enableDesktopNotifications) {
+            showDesktopNotification();
+          }
         }
       });
+    } catch (error) {
+      console.error("RaterHub Monitor: Error in playAlarm:", error);
+      // Fallback to direct audio playing
+      playAlarmDirectly();
+    }
+  }
 
-      // Play the audio and handle the promise
-      try {
-        await currentAudio.play();
-        console.log("RaterHub Monitor: Alarm played successfully");
+  function playAlarmDirectly() {
+    console.log("RaterHub Monitor: Using direct audio approach");
+
+    // Stop any existing alarm first
+    stopAlarm();
+
+    let audioUrl;
+
+    // Keep sound source selection logic (default/file/URL)
+    if (
+      currentSettings.alertSoundType === "file" &&
+      currentSettings.alertSoundData
+    ) {
+      // Play custom file sound
+      audioUrl = currentSettings.alertSoundData;
+    } else if (
+      currentSettings.alertSoundType === "url" &&
+      currentSettings.alertSoundData
+    ) {
+      // Play URL sound
+      audioUrl = currentSettings.alertSoundData;
+    } else {
+      // Play default alarm
+      audioUrl = chrome.runtime.getURL("alarm.mp3");
+    }
+
+    // Simplify to direct Audio creation and play
+    currentAudio = new Audio(audioUrl);
+    currentAudio.volume = 1.0;
+    currentAudio.loop = false;
+
+    // Direct play without async/await or event listeners
+    currentAudio
+      .play()
+      .then(() => {
+        console.log("RaterHub Monitor: Direct alarm played successfully");
 
         // Show desktop notification if enabled
         if (currentSettings.enableDesktopNotifications) {
           showDesktopNotification();
         }
-      } catch (playError) {
-        console.error("RaterHub Monitor: Failed to play alarm:", playError);
-        // Fallback to default alarm if custom sound fails
-        if (currentSettings.alertSoundType !== "default") {
-          console.log("RaterHub Monitor: Falling back to default alarm");
-          playDefaultAlarm();
-        } else {
-          fallbackBeep();
-        }
-      }
-    } catch (error) {
-      console.error("RaterHub Monitor: Error in playAlarm:", error);
-      playDefaultAlarm();
-    }
-  }
-
-  async function playDefaultAlarm() {
-    try {
-      stopAlarm();
-
-      currentAudio = new Audio(chrome.runtime.getURL("alarm.mp3"));
-      currentAudio.volume = 1.0;
-      currentAudio.loop = false;
-
-      currentAudio.addEventListener("error", (e) => {
-        console.error("RaterHub Monitor: Default audio error:", e);
-        fallbackBeep();
+      })
+      .catch((error) => {
+        console.error("RaterHub Monitor: Failed to play direct alarm:", error);
       });
-
-      try {
-        await currentAudio.play();
-        console.log("RaterHub Monitor: Default alarm played successfully");
-      } catch (playError) {
-        console.error(
-          "RaterHub Monitor: Failed to play default alarm:",
-          playError
-        );
-        fallbackBeep();
-      }
-    } catch (error) {
-      console.error("RaterHub Monitor: Error creating default audio:", error);
-      fallbackBeep();
-    }
   }
 
   function stopAlarm() {
+    try {
+      console.log("RaterHub Monitor: Requesting background to stop alarm");
+
+      // Send message to background script to stop alarm
+      chrome.runtime.sendMessage({ action: "stopAlarm" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            "RaterHub Monitor: Error sending stopAlarm message:",
+            chrome.runtime.lastError
+          );
+          // Fallback to direct stop if background fails
+          stopAlarmDirectly();
+        } else {
+          console.log(
+            "RaterHub Monitor: Background stop alarm request sent successfully"
+          );
+        }
+      });
+    } catch (error) {
+      console.error("RaterHub Monitor: Error in stopAlarm:", error);
+      // Fallback to direct stop
+      stopAlarmDirectly();
+    }
+  }
+
+  function stopAlarmDirectly() {
     if (currentAudio) {
       try {
         currentAudio.pause();
         currentAudio.currentTime = 0;
         currentAudio = null;
-        console.log("RaterHub Monitor: Alarm stopped");
+        console.log("RaterHub Monitor: Direct alarm stopped");
       } catch (error) {
-        console.error("RaterHub Monitor: Error stopping alarm:", error);
+        console.error("RaterHub Monitor: Error stopping direct alarm:", error);
       }
     }
   }
@@ -882,6 +931,25 @@ if (window.raterHubMonitorLoaded) {
       );
       sessionStorage.removeItem("raterhub_pending_alarm");
       playAlarm();
+    }
+
+    // Check if we need to continue alarm after page navigation
+    const continueAlarm = sessionStorage.getItem("raterhub_continue_alarm");
+    const alarmTimestamp = sessionStorage.getItem("raterhub_alarm_timestamp");
+
+    if (continueAlarm && alarmTimestamp) {
+      const timeDiff = Date.now() - parseInt(alarmTimestamp);
+      // Only continue if alarm was started within the last 30 seconds
+      if (timeDiff < 30000) {
+        console.log("RaterHub Monitor: Continuing alarm after page navigation");
+        sessionStorage.removeItem("raterhub_continue_alarm");
+        sessionStorage.removeItem("raterhub_alarm_timestamp");
+        playAlarm();
+      } else {
+        // Clean up old flags
+        sessionStorage.removeItem("raterhub_continue_alarm");
+        sessionStorage.removeItem("raterhub_alarm_timestamp");
+      }
     }
   }
 
