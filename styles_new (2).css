@@ -50,21 +50,22 @@
     "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Dark theme variables */
+/* Dark theme variables - Refined for better visual harmony */
 [data-theme="dark"] {
-  --bg-primary: #111827;
-  --bg-secondary: #1f2937;
-  --bg-tertiary: #374151;
+  /* Softer, more balanced background colors */
+  --bg-primary: #1a1f2e; /* Lighter than #111827 for reduced contrast */
+  --bg-secondary: #252b3b; /* Closer to card colors for harmony */
+  --bg-tertiary: #374151; /* Maintained for UI elements */
   --text-primary: #f9fafb;
   --text-secondary: #e5e7eb;
   --text-tertiary: #9ca3af;
-  --border-color: #374151;
-  --card-bg: #1f2937;
-  --card-border: #374151;
-  --shadow-color: rgba(0, 0, 0, 0.3);
+  --border-color: #3f4555; /* Slightly lighter for subtle definition */
+  --card-bg: #252b3b; /* Matches bg-secondary for seamless integration */
+  --card-border: #3f4555; /* Consistent with border-color */
+  --shadow-color: rgba(0, 0, 0, 0.4); /* Enhanced depth */
 
-  /* Adjust gray scale for dark theme */
-  --gray-50: #1f2937;
+  /* Refined gray scale for dark theme */
+  --gray-50: #252b3b;
   --gray-100: #374151;
   --gray-200: #4b5563;
   --gray-300: #6b7280;

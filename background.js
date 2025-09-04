@@ -401,6 +401,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // Handle Gmail user profile requests
+  if (message.action === "getGmailUserProfile") {
+    console.log("Background: Received Gmail user profile request");
+    handleGetGmailUserProfile(sendResponse);
+    return true;
+  }
+
   // Handle Gmail authentication clearing
   if (message.action === "clearGmailAuth") {
     console.log("Background: Received clear Gmail auth request");
@@ -907,34 +914,577 @@ function createAuthRequiredNotification() {
 
 // Gmail integration functions
 
-// Authentication status management
-function getAuthenticationStatusIndicator() {
-  return new Promise((resolve) => {
-    chrome.storage.sync.get(
-      [
-        "gmailAuthStatus",
-        "gmailAuthError",
-        "gmailAuthTimestamp",
-        "gmailAuthToken",
-      ],
-      (data) => {
-        const status = {
-          status: data.gmailAuthStatus || "not_authenticated",
-          isAuthenticated: data.gmailAuthStatus === "authenticated",
-          isAuthenticating: data.gmailAuthStatus === "authenticating",
-          hasError:
-            data.gmailAuthStatus === "authentication_error" ||
-            data.gmailAuthStatus === "authentication_failed",
-          error: data.gmailAuthError || null,
-          timestamp: data.gmailAuthTimestamp || null,
-          hasToken: !!data.gmailAuthToken,
-          // Human-readable status message
-          message: getStatusMessage(data.gmailAuthStatus, data.gmailAuthError),
-        };
-        resolve(status);
+// Sophisticated Authentication Status Cache Management - Hybrid Approach
+class AuthStatusCache {
+  static CACHE_KEY = "authStatusCache";
+  static CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours (event-driven)
+  static VERIFICATION_COOLDOWN = 60 * 1000; // 1 minute between verifications
+  static MAX_CACHE_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days max cache age
+  static HEALTH_CHECK_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+
+  static cache = null;
+  static lastVerificationTime = 0;
+  static isRefreshing = false;
+  static healthCheckInterval = null;
+  static lastHealthCheck = 0;
+
+  /**
+   * Get cached authentication status with intelligent refresh logic
+   */
+  static async getCachedStatus(forceRefresh = false) {
+    const now = Date.now();
+
+    // Return cached status if still valid and not forcing refresh
+    if (!forceRefresh && this.cache && this.isCacheValid(now)) {
+      console.log("AuthStatusCache: Returning cached status (valid)");
+      return this.cache;
+    }
+
+    // If already refreshing, wait for the current refresh to complete
+    if (this.isRefreshing) {
+      console.log("AuthStatusCache: Already refreshing, waiting...");
+      return this.waitForRefresh();
+    }
+
+    // Start refresh process
+    this.isRefreshing = true;
+
+    try {
+      console.log("AuthStatusCache: Refreshing authentication status");
+
+      const freshStatus = await this.fetchFreshStatus();
+      this.cache = {
+        ...freshStatus,
+        cachedAt: now,
+        expiresAt: now + this.CACHE_DURATION,
+      };
+
+      // Store in chrome storage for persistence across service worker restarts
+      await this.persistCache();
+
+      console.log("AuthStatusCache: Status refreshed and cached");
+      return this.cache;
+    } catch (error) {
+      console.error("AuthStatusCache: Failed to refresh status:", error);
+
+      // Return stale cache if available, otherwise return error status
+      if (this.cache && this.isCacheUsable(now)) {
+        console.log("AuthStatusCache: Returning stale cache due to error");
+        return this.cache;
       }
+
+      return this.createErrorStatus(error);
+    } finally {
+      this.isRefreshing = false;
+    }
+  }
+
+  /**
+   * Check if cache is still valid
+   */
+  static isCacheValid(now) {
+    if (!this.cache) return false;
+
+    const age = now - this.cache.cachedAt;
+    const isExpired = age > this.CACHE_DURATION;
+    const isTooOld = age > this.MAX_CACHE_AGE;
+
+    // Cache is valid if not expired and not too old
+    return !isExpired && !isTooOld;
+  }
+
+  /**
+   * Check if stale cache can still be used in error scenarios
+   */
+  static isCacheUsable(now) {
+    if (!this.cache) return false;
+
+    const age = now - this.cache.cachedAt;
+    return age < this.MAX_CACHE_AGE;
+  }
+
+  /**
+   * Wait for ongoing refresh to complete
+   */
+  static async waitForRefresh(maxWait = 5000) {
+    const startTime = Date.now();
+
+    while (this.isRefreshing && Date.now() - startTime < maxWait) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    return this.cache || this.createErrorStatus(new Error("Refresh timeout"));
+  }
+
+  /**
+   * Fetch fresh authentication status with conditional verification
+   */
+  static async fetchFreshStatus() {
+    // Get basic status from storage first
+    const basicStatus = await this.getBasicStatusFromStorage();
+
+    // Only perform expensive verification if conditions are met
+    if (this.shouldVerifyToken(basicStatus)) {
+      console.log("AuthStatusCache: Performing token verification");
+      return await this.verifyAndUpdateStatus(basicStatus);
+    }
+
+    console.log("AuthStatusCache: Skipping token verification");
+    return this.enhanceStatusWithMetadata(basicStatus);
+  }
+
+  /**
+   * Get basic status from chrome storage
+   */
+  static async getBasicStatusFromStorage() {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get(
+        [
+          "gmailAuthStatus",
+          "gmailAuthError",
+          "gmailAuthTimestamp",
+          "gmailAuthToken",
+        ],
+        (data) => {
+          const status = {
+            status: data.gmailAuthStatus || "not_authenticated",
+            isAuthenticated: data.gmailAuthStatus === "authenticated",
+            isAuthenticating: data.gmailAuthStatus === "authenticating",
+            hasError:
+              data.gmailAuthStatus === "authentication_error" ||
+              data.gmailAuthStatus === "authentication_failed",
+            error: data.gmailAuthError || null,
+            timestamp: data.gmailAuthTimestamp || null,
+            hasToken: !!data.gmailAuthToken,
+            message: getStatusMessage(
+              data.gmailAuthStatus,
+              data.gmailAuthError
+            ),
+          };
+          resolve(status);
+        }
+      );
+    });
+  }
+
+  /**
+   * Determine if token verification is necessary
+   */
+  static shouldVerifyToken(status) {
+    const now = Date.now();
+
+    // Don't verify if not authenticated
+    if (!status.isAuthenticated || !status.hasToken) {
+      return false;
+    }
+
+    // Don't verify if authenticating
+    if (status.isAuthenticating) {
+      return false;
+    }
+
+    // Don't verify if there's an active error
+    if (status.hasError) {
+      return false;
+    }
+
+    // Respect verification cooldown
+    if (now - this.lastVerificationTime < this.VERIFICATION_COOLDOWN) {
+      console.log("AuthStatusCache: Skipping verification due to cooldown");
+      return false;
+    }
+
+    // Verify if status is old or uncertain
+    const statusAge = status.timestamp
+      ? now - new Date(status.timestamp).getTime()
+      : Infinity;
+    if (statusAge > this.CACHE_DURATION) {
+      console.log("AuthStatusCache: Verifying due to old status");
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Perform token verification and update status accordingly
+   */
+  static async verifyAndUpdateStatus(status) {
+    this.lastVerificationTime = Date.now();
+
+    try {
+      const tokenCheck = await GmailService.verifyToken();
+
+      if (!tokenCheck.valid) {
+        console.log(
+          "AuthStatusCache: Token verification failed, updating status"
+        );
+
+        // Update storage with verification failure
+        await this.updateStorageStatus("authentication_required", {
+          type: "TOKEN_EXPIRED",
+          message: "Token verification failed",
+          userMessage:
+            "Your authentication has expired. Please re-authenticate.",
+          timestamp: new Date().toISOString(),
+        });
+
+        // Broadcast status change
+        broadcastAuthStatusChange();
+
+        return this.enhanceStatusWithMetadata({
+          ...status,
+          status: "authentication_required",
+          isAuthenticated: false,
+          hasError: true,
+          error: {
+            type: "TOKEN_EXPIRED",
+            message: "Token verification failed",
+            userMessage:
+              "Your authentication has expired. Please re-authenticate.",
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
+
+      // Token is valid, return enhanced status
+      return this.enhanceStatusWithMetadata({
+        ...status,
+        lastVerified: new Date().toISOString(),
+        verificationResult: "valid",
+      });
+    } catch (error) {
+      console.error("AuthStatusCache: Token verification error:", error);
+
+      // Only update status for critical authentication errors
+      if (this.isCriticalAuthError(error)) {
+        await this.updateStorageStatus("authentication_required", {
+          type: "TOKEN_VERIFICATION_ERROR",
+          message: error.message,
+          userMessage:
+            "Unable to verify authentication. Please re-authenticate.",
+          timestamp: new Date().toISOString(),
+        });
+
+        broadcastAuthStatusChange();
+
+        return this.enhanceStatusWithMetadata({
+          ...status,
+          status: "authentication_required",
+          isAuthenticated: false,
+          hasError: true,
+          error: {
+            type: "TOKEN_VERIFICATION_ERROR",
+            message: error.message,
+            userMessage:
+              "Unable to verify authentication. Please re-authenticate.",
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
+
+      // For non-critical errors, return status with verification note
+      return this.enhanceStatusWithMetadata({
+        ...status,
+        lastVerified: new Date().toISOString(),
+        verificationResult: "error_non_critical",
+        verificationError: error.message,
+      });
+    }
+  }
+
+  /**
+   * Check if error is critical enough to require re-authentication
+   */
+  static isCriticalAuthError(error) {
+    return (
+      error.message?.includes("invalid_grant") ||
+      error.message?.includes("401") ||
+      error.type === "AUTHENTICATION_ERROR" ||
+      error.type === "TOKEN_EXPIRED"
     );
-  });
+  }
+
+  /**
+   * Update authentication status in storage
+   */
+  static async updateStorageStatus(status, error = null) {
+    const updateData = {
+      gmailAuthStatus: status,
+      gmailAuthTimestamp: new Date().toISOString(),
+    };
+
+    if (error) {
+      updateData.gmailAuthError = error;
+    }
+
+    return new Promise((resolve) => {
+      chrome.storage.sync.set(updateData, resolve);
+    });
+  }
+
+  /**
+   * Enhance status with additional metadata
+   */
+  static enhanceStatusWithMetadata(status) {
+    const now = Date.now();
+
+    return {
+      ...status,
+      cachedAt: now,
+      expiresAt: now + this.CACHE_DURATION,
+      isFromCache: true,
+      cacheAge: this.cache ? now - this.cache.cachedAt : 0,
+      nextVerificationAllowed:
+        this.lastVerificationTime + this.VERIFICATION_COOLDOWN,
+      verificationCooldownRemaining: Math.max(
+        0,
+        this.lastVerificationTime + this.VERIFICATION_COOLDOWN - now
+      ),
+    };
+  }
+
+  /**
+   * Create error status for failure scenarios
+   */
+  static createErrorStatus(error) {
+    return {
+      status: "error",
+      isAuthenticated: false,
+      isAuthenticating: false,
+      hasError: true,
+      error: {
+        type: "CACHE_ERROR",
+        message: error.message,
+        userMessage: "Unable to retrieve authentication status",
+        timestamp: new Date().toISOString(),
+      },
+      timestamp: new Date().toISOString(),
+      hasToken: false,
+      message: "Error retrieving authentication status",
+      cachedAt: Date.now(),
+      expiresAt: Date.now() + this.CACHE_DURATION,
+      isFromCache: false,
+    };
+  }
+
+  /**
+   * Persist cache to chrome storage
+   */
+  static async persistCache() {
+    if (!this.cache) return;
+
+    try {
+      await new Promise((resolve) => {
+        chrome.storage.local.set(
+          {
+            [this.CACHE_KEY]: {
+              data: this.cache,
+              persistedAt: Date.now(),
+            },
+          },
+          resolve
+        );
+      });
+    } catch (error) {
+      console.error("AuthStatusCache: Failed to persist cache:", error);
+    }
+  }
+
+  /**
+   * Load persisted cache from chrome storage
+   */
+  static async loadPersistedCache() {
+    try {
+      const data = await new Promise((resolve) => {
+        chrome.storage.local.get([this.CACHE_KEY], resolve);
+      });
+
+      if (data[this.CACHE_KEY]) {
+        const { data: cachedData, persistedAt } = data[this.CACHE_KEY];
+        const now = Date.now();
+
+        // Only use persisted cache if it's not too old
+        if (now - persistedAt < this.MAX_CACHE_AGE) {
+          this.cache = cachedData;
+          console.log("AuthStatusCache: Loaded persisted cache");
+        } else {
+          console.log("AuthStatusCache: Persisted cache too old, discarding");
+        }
+      }
+    } catch (error) {
+      console.error("AuthStatusCache: Failed to load persisted cache:", error);
+    }
+  }
+
+  /**
+   * Invalidate cache (useful when authentication state changes)
+   */
+  static invalidateCache() {
+    console.log("AuthStatusCache: Invalidating cache");
+    this.cache = null;
+  }
+
+  /**
+   * Force refresh cache
+   */
+  static async forceRefresh() {
+    console.log("AuthStatusCache: Forcing cache refresh");
+    return this.getCachedStatus(true);
+  }
+
+  /**
+   * Get cache statistics for debugging
+   */
+  static getCacheStats() {
+    const now = Date.now();
+
+    return {
+      hasCache: !!this.cache,
+      cacheAge: this.cache ? now - this.cache.cachedAt : 0,
+      cacheExpiresIn: this.cache ? Math.max(0, this.cache.expiresAt - now) : 0,
+      lastVerificationAge: now - this.lastVerificationTime,
+      verificationCooldownRemaining: Math.max(
+        0,
+        this.lastVerificationTime + this.VERIFICATION_COOLDOWN - now
+      ),
+      isRefreshing: this.isRefreshing,
+      lastHealthCheckAge: now - this.lastHealthCheck,
+      healthCheckIntervalActive: !!this.healthCheckInterval,
+    };
+  }
+
+  /**
+   * Start daily health check interval (Hybrid Approach)
+   */
+  static startHealthCheckInterval() {
+    console.log("AuthStatusCache: Starting daily health check interval");
+
+    // Clear any existing interval
+    this.stopHealthCheckInterval();
+
+    // Start new interval
+    this.healthCheckInterval = setInterval(() => {
+      this.performHealthCheck();
+    }, this.HEALTH_CHECK_INTERVAL);
+
+    console.log("AuthStatusCache: Daily health check interval started");
+  }
+
+  /**
+   * Stop daily health check interval
+   */
+  static stopHealthCheckInterval() {
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+      console.log("AuthStatusCache: Daily health check interval stopped");
+    }
+  }
+
+  /**
+   * Perform daily health check
+   */
+  static async performHealthCheck() {
+    const now = Date.now();
+    console.log("AuthStatusCache: Performing daily health check");
+
+    this.lastHealthCheck = now;
+
+    try {
+      // Force a fresh status check
+      const freshStatus = await this.forceRefresh();
+
+      // If status has changed or is stale, broadcast the change
+      if (freshStatus.status !== this.cache?.status) {
+        console.log("AuthStatusCache: Health check detected status change");
+        broadcastAuthStatusChange();
+      }
+
+      console.log("AuthStatusCache: Daily health check completed successfully");
+    } catch (error) {
+      console.error("AuthStatusCache: Daily health check failed:", error);
+    }
+  }
+
+  /**
+   * Trigger immediate authentication status check (Event-driven)
+   */
+  static async triggerImmediateCheck(reason = "manual") {
+    console.log(
+      `AuthStatusCache: Triggering immediate check (reason: ${reason})`
+    );
+
+    try {
+      const freshStatus = await this.forceRefresh();
+
+      // Broadcast the updated status
+      broadcastAuthStatusChange();
+
+      console.log("AuthStatusCache: Immediate check completed");
+      return freshStatus;
+    } catch (error) {
+      console.error("AuthStatusCache: Immediate check failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Smart cache invalidation based on events
+   */
+  static invalidateCacheOnEvent(eventType, eventData = {}) {
+    console.log(
+      `AuthStatusCache: Invalidating cache due to event: ${eventType}`,
+      eventData
+    );
+
+    // Invalidate cache
+    this.invalidateCache();
+
+    // For certain events, trigger immediate check
+    const immediateCheckEvents = [
+      "auth_error_detected",
+      "token_expired",
+      "network_restored",
+      "user_action",
+    ];
+
+    if (immediateCheckEvents.includes(eventType)) {
+      console.log("AuthStatusCache: Event requires immediate status check");
+      setTimeout(() => {
+        this.triggerImmediateCheck(`event_${eventType}`);
+      }, 1000); // Delay to allow cache invalidation to complete
+    }
+  }
+
+  /**
+   * Enhanced invalidate cache with smart invalidation
+   */
+  static invalidateCache() {
+    console.log("AuthStatusCache: Invalidating cache (enhanced)");
+    this.cache = null;
+
+    // Reset verification timing to allow immediate verification if needed
+    this.lastVerificationTime = 0;
+  }
+}
+
+// Initialize cache on service worker startup
+chrome.runtime.onStartup.addListener(() => {
+  AuthStatusCache.loadPersistedCache();
+  // Start health check interval for hybrid approach
+  AuthStatusCache.startHealthCheckInterval();
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  AuthStatusCache.loadPersistedCache();
+  // Start health check interval for hybrid approach
+  AuthStatusCache.startHealthCheckInterval();
+});
+
+// Authentication status management (legacy function for backward compatibility)
+function getAuthenticationStatusIndicator() {
+  return AuthStatusCache.getCachedStatus();
 }
 
 function getStatusMessage(status, error) {
@@ -988,30 +1538,7 @@ async function handleTaskDetected(taskData) {
   try {
     console.log("Background: Handling task detection for Gmail notifications");
 
-    // Check authentication status first
-    const authStatus = await getAuthenticationStatusIndicator();
-
-    if (!authStatus.isAuthenticated) {
-      console.log(
-        "Background: Not authenticated with Gmail, skipping notification"
-      );
-
-      // Notify user about authentication requirement
-      createAuthRequiredNotification();
-
-      // Update status to indicate re-authentication is needed
-      chrome.storage.sync.set({
-        gmailAuthStatus: "authentication_required",
-        gmailAuthTimestamp: new Date().toISOString(),
-      });
-
-      // Broadcast the status change
-      broadcastAuthStatusChange();
-
-      return;
-    }
-
-    // Get Gmail settings
+    // Get Gmail settings first
     const settings = await new Promise((resolve) => {
       chrome.storage.sync.get(
         ["enableGmailNotifications", "notificationEmail"],
@@ -1031,7 +1558,7 @@ async function handleTaskDetected(taskData) {
       settings.notificationEmail
     );
 
-    // Send the email using Gmail service
+    // Try to send the email - this will handle authentication internally if needed
     const result = await GmailService.sendTaskNotification(
       taskData,
       settings.notificationEmail
@@ -1054,7 +1581,9 @@ async function handleTaskDetected(taskData) {
     if (
       error.message.includes("invalid_grant") ||
       error.message.includes("401") ||
-      error.message.includes("unauthorized")
+      error.message.includes("unauthorized") ||
+      error.type === "AUTHENTICATION_ERROR" ||
+      error.type === "TOKEN_EXPIRED"
     ) {
       console.log("Background: Gmail authentication error detected");
 
@@ -1284,6 +1813,28 @@ async function handleGetGmailAuthStatus(sendResponse) {
   }
 }
 
+// New handler for getting Gmail user profile
+async function handleGetGmailUserProfile(sendResponse) {
+  try {
+    console.log("Background: Getting Gmail user profile");
+
+    const userProfile = await GmailService.getUserProfile();
+
+    sendResponse({
+      success: true,
+      userProfile: userProfile,
+    });
+  } catch (error) {
+    console.error("Background: Failed to get Gmail user profile:", error);
+
+    sendResponse({
+      success: false,
+      message: "Failed to retrieve user profile",
+      error: error.message,
+    });
+  }
+}
+
 // New handler for clearing Gmail authentication
 async function handleClearGmailAuth(sendResponse) {
   try {
@@ -1293,6 +1844,9 @@ async function handleClearGmailAuth(sendResponse) {
 
     // Update status
     await updateAuthStatus("not_authenticated");
+
+    // Invalidate AuthStatusCache to ensure fresh status on next check
+    AuthStatusCache.invalidateCache();
 
     // Broadcast status change
     broadcastAuthStatusChange();
@@ -1319,8 +1873,13 @@ async function handleImmediateAuthStatusCheck(sendResponse) {
 
     const authStatus = await getAuthenticationStatusIndicator();
 
-    // Also check if the token is still valid by making a test API call
-    if (authStatus.isAuthenticated) {
+    // Only perform token verification if we have a stored token and it's marked as authenticated
+    // and only if the last verification was not recent (to avoid unnecessary auth requests)
+    if (
+      authStatus.isAuthenticated &&
+      authStatus.hasToken &&
+      !authStatus.lastVerifiedRecently
+    ) {
       try {
         // Make a simple API call to verify token validity
         const tokenCheck = await GmailService.verifyToken();
@@ -1354,29 +1913,42 @@ async function handleImmediateAuthStatusCheck(sendResponse) {
       } catch (error) {
         console.error("Background: Token verification error:", error);
 
-        // Update status on verification error
-        chrome.storage.sync.set({
-          gmailAuthStatus: "authentication_required",
-          gmailAuthError: {
-            type: "TOKEN_VERIFICATION_ERROR",
-            message: error.message,
-            userMessage:
-              "Unable to verify authentication. Please re-authenticate.",
-            timestamp: new Date().toISOString(),
-          },
-          gmailAuthTimestamp: new Date().toISOString(),
-        });
+        // Only update status if it's a clear authentication error
+        if (
+          error.message.includes("invalid_grant") ||
+          error.message.includes("401") ||
+          error.type === "AUTHENTICATION_ERROR" ||
+          error.type === "TOKEN_EXPIRED"
+        ) {
+          // Update status on verification error
+          chrome.storage.sync.set({
+            gmailAuthStatus: "authentication_required",
+            gmailAuthError: {
+              type: "TOKEN_VERIFICATION_ERROR",
+              message: error.message,
+              userMessage:
+                "Unable to verify authentication. Please re-authenticate.",
+              timestamp: new Date().toISOString(),
+            },
+            gmailAuthTimestamp: new Date().toISOString(),
+          });
 
-        // Broadcast the status change
-        broadcastAuthStatusChange();
+          // Broadcast the status change
+          broadcastAuthStatusChange();
 
-        // Return updated status
-        const updatedStatus = await getAuthenticationStatusIndicator();
-        sendResponse({
-          success: true,
-          authStatus: updatedStatus,
-        });
-        return;
+          // Return updated status
+          const updatedStatus = await getAuthenticationStatusIndicator();
+          sendResponse({
+            success: true,
+            authStatus: updatedStatus,
+          });
+          return;
+        } else {
+          // For other errors, just log and continue with current status
+          console.log(
+            "Background: Non-critical token verification error, continuing with current status"
+          );
+        }
       }
     }
 

@@ -627,6 +627,107 @@ class GmailService {
     await TokenManager.clearStoredToken();
   }
 
+  static async verifyToken() {
+    GmailLogger.log("info", "Verifying token validity");
+
+    try {
+      const token = await TokenManager.getValidToken();
+      const response = await fetch(
+        `https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${encodeURIComponent(
+          token
+        )}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const tokenInfo = await response.json();
+        GmailLogger.log("info", "Token verification successful", {
+          email: tokenInfo.email,
+          expires_in: tokenInfo.expires_in,
+        });
+        return { valid: true, profile: tokenInfo };
+      } else if (response.status === 400) {
+        GmailLogger.log("warn", "Token verification failed - invalid token");
+        return { valid: false, error: "invalid_token" };
+      } else {
+        GmailLogger.log("warn", "Token verification failed", {
+          status: response.status,
+          statusText: response.statusText,
+        });
+        return { valid: false, error: "api_error" };
+      }
+    } catch (error) {
+      GmailLogger.log("error", "Token verification error", {
+        errorType: error.type,
+        errorMessage: error.message,
+      });
+      return { valid: false, error: error.message };
+    }
+  }
+
+  static async getUserProfile() {
+    GmailLogger.log("info", "Getting user profile information");
+
+    return await RetryManager.executeWithRetry(async () => {
+      try {
+        const token = await TokenManager.getValidToken();
+
+        // Use tokeninfo endpoint which doesn't require special scopes
+        const response = await fetch(
+          `https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${encodeURIComponent(
+            token
+          )}`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          GmailLogger.log("error", "Token info API error", {
+            status: response.status,
+            statusText: response.statusText,
+            errorText: errorText,
+          });
+          throw new GmailError(
+            ErrorTypes.AUTHENTICATION_ERROR,
+            `Failed to retrieve token info: ${response.status} ${response.statusText}`
+          );
+        }
+
+        const tokenInfo = await response.json();
+        GmailLogger.log("info", "Token info retrieved successfully", {
+          email: tokenInfo.email,
+          scope: tokenInfo.scope,
+          expires_in: tokenInfo.expires_in,
+        });
+
+        return {
+          emailAddress: tokenInfo.email,
+          issued_to: tokenInfo.issued_to,
+          audience: tokenInfo.audience,
+          scope: tokenInfo.scope,
+          expires_in: tokenInfo.expires_in,
+          access_type: tokenInfo.access_type,
+        };
+      } catch (error) {
+        GmailLogger.log("error", "Failed to get user profile", {
+          errorType: error.type,
+          errorMessage: error.message,
+        });
+        throw error;
+      }
+    });
+  }
+
   static async getAuthenticationStatus() {
     try {
       const tokenData = await TokenManager.getStoredToken();
@@ -641,12 +742,24 @@ class GmailService {
 
       const isExpired = TokenManager.isTokenExpired(tokenData);
 
+      // Try to get the authenticated email address from user profile
+      let emailAddress = null;
+      try {
+        const profile = await this.getUserProfile();
+        emailAddress = profile.emailAddress;
+      } catch (e) {
+        GmailLogger.log("warn", "Failed to get user profile for auth status", {
+          error: e.message,
+        });
+      }
+
       return {
         authenticated: !isExpired,
         status: isExpired ? "token_expired" : "authenticated",
         message: isExpired
           ? "Authentication token has expired"
-          : "Authenticated with Gmail",
+          : `Authenticated user: ${emailAddress || "unknown"}`,
+        emailAddress: emailAddress,
         expiresAt: tokenData.expiresAt,
         timestamp: tokenData.timestamp,
       };

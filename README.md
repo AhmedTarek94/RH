@@ -8,6 +8,15 @@ A Chrome extension developed by **Ahmed Tarek** that automates task monitoring, 
 
 ## Version History
 
+### v2.1.0 - Project Cleanup and Optimization
+
+- **Code Cleanup**: Removed obsolete test files, outdated planning documents, and duplicate CSS files
+- **File Organization**: Streamlined project structure by eliminating redundant files
+- **Performance Optimization**: Reduced extension size and improved load times
+- **CSS Consolidation**: Unified styling with enhanced dark theme and compact mode features
+- **Bug Fixes**: Resolved potential issues from duplicate and outdated files
+- **Maintenance**: Improved project maintainability and reduced complexity
+
 ### v2.0 - Gmail Notifications Integration
 
 - **Gmail Integration**: Send email notifications when tasks are available

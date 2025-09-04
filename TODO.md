@@ -1,38 +1,25 @@
-# RHAT Extension - TODO List
+# TODO: Fix Gmail Authentication Clearing Issue
 
-## Completed Tasks ✅
+## Issue Description
 
-### Gmail Integration Fixes
+When clearing Gmail authentication, the AuthStatusCache was not being invalidated, causing stale authentication status to persist even after clearing.
 
-- [x] Fixed `handleTestEmail` function to use `GmailService.sendTestEmail` instead of old `AuthService.getAuthTokenForServiceWorker`
-- [x] Added missing `createAuthRequiredNotification` function to background.js
-- [x] Verified all imports are correct in background.js
-- [x] Confirmed no unused imports (like `request`) are present
+## Solution Implemented
 
-## Pending Tasks ⏳
+- Added `AuthStatusCache.invalidateCache();` call in the `handleClearGmailAuth` function in background.js
+- This ensures that when authentication is cleared, the cache is properly invalidated
+- Next authentication status check will fetch fresh data from storage
 
-### Testing
+## Files Modified
 
-- [ ] Test Gmail authentication flow
-- [ ] Test email notification sending
-- [ ] Test error handling for authentication failures
-- [ ] Verify notification creation works properly
+- [x] background.js - Added cache invalidation in handleClearGmailAuth function
 
-### Code Review
+## Testing
 
-- [ ] Review all Gmail-related functions for consistency
-- [ ] Check for any other missing functions or imports
-- [ ] Verify error handling is comprehensive
+- [ ] Test clearing Gmail authentication and verify status updates correctly
+- [ ] Verify that subsequent authentication status checks return fresh data
+- [ ] Confirm that all extension components receive updated authentication status
 
-### Documentation
+## Status
 
-- [ ] Update README with Gmail integration setup instructions
-- [ ] Document OAuth setup requirements
-- [ ] Add troubleshooting guide for common Gmail issues
-
-## Notes
-
-- All critical fixes for Gmail integration have been completed
-- The extension should now properly handle Gmail authentication and email notifications
-- Error handling has been improved with specific user-friendly messages
-- Authentication status management is working correctly
+✅ **COMPLETED** - Cache invalidation added to authentication clearing flow

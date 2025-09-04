@@ -53,10 +53,19 @@ class AuthService {
 
       const storedToken = await this.getStoredToken();
 
-      // If no stored token, get new one
+      // If no stored token, get new one only if interactive is true
       if (!storedToken) {
-        console.log("AuthService: No stored token, getting new token");
-        return await this.authenticate(interactive);
+        if (interactive) {
+          console.log(
+            "AuthService: No stored token, getting new token interactively"
+          );
+          return await this.authenticate(true);
+        } else {
+          console.log(
+            "AuthService: No stored token and non-interactive call, returning null"
+          );
+          return null;
+        }
       }
 
       // Check if token is expired or about to expire
@@ -226,8 +235,53 @@ class AuthService {
   static async clearAllAuthData() {
     console.log("AuthService: Clearing all authentication data");
 
-    const keysToRemove = Object.values(this.STORAGE_KEYS);
+    // First, get the stored token so we can remove it from Chrome's cache
+    let storedToken = null;
+    try {
+      const tokenData = await this.getStoredToken();
+      storedToken = tokenData ? tokenData.token : null;
+      console.log("AuthService: Retrieved stored token for cache removal");
+    } catch (error) {
+      console.log("AuthService: Could not retrieve stored token:", error);
+    }
 
+    // Remove the specific cached token if we have it
+    if (storedToken) {
+      try {
+        await new Promise((resolve, reject) => {
+          chrome.identity.removeCachedAuthToken({ token: storedToken }, () => {
+            if (chrome.runtime.lastError) {
+              console.error(
+                "AuthService: Error removing specific cached token:",
+                chrome.runtime.lastError
+              );
+              reject(chrome.runtime.lastError);
+            } else {
+              console.log("AuthService: Specific cached token removed");
+              resolve();
+            }
+          });
+        });
+      } catch (error) {
+        console.log(
+          "AuthService: Failed to remove specific cached token:",
+          error
+        );
+      }
+    }
+
+    // Also clear any remaining cached tokens in Chrome Identity as a fallback
+    try {
+      await new Promise((resolve) => {
+        chrome.identity.clearAllCachedAuthTokens(resolve);
+      });
+      console.log("AuthService: All cached tokens cleared");
+    } catch (error) {
+      console.error("AuthService: Error clearing cached tokens:", error);
+    }
+
+    // Finally, clear our storage data
+    const keysToRemove = Object.values(this.STORAGE_KEYS);
     await new Promise((resolve) => {
       chrome.storage.sync.remove(keysToRemove, () => {
         if (chrome.runtime.lastError) {
@@ -236,21 +290,13 @@ class AuthService {
             chrome.runtime.lastError
           );
         } else {
-          console.log("AuthService: Authentication data cleared");
+          console.log("AuthService: Authentication data cleared from storage");
         }
         resolve();
       });
     });
 
-    // Also clear any cached tokens in Chrome Identity
-    try {
-      await new Promise((resolve) => {
-        chrome.identity.removeCachedAuthToken({}, resolve);
-      });
-      console.log("AuthService: Cached tokens cleared");
-    } catch (error) {
-      console.error("AuthService: Error clearing cached tokens:", error);
-    }
+    console.log("AuthService: Complete authentication cleanup finished");
   }
 
   /**
@@ -262,7 +308,8 @@ class AuthService {
       token: token,
       timestamp: Date.now(),
       expiresAt: Date.now() + 3600 * 1000, // 1 hour expiry
-      scope: "https://www.googleapis.com/auth/gmail.send",
+      scope:
+        "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
     };
 
     await new Promise((resolve, reject) => {
