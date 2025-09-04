@@ -38,6 +38,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Initialize tab functionality
   initializeTabs();
 
+  // Load and display extension version
+  loadExtensionVersion();
+
   // Load current settings (will override theme if different)
   loadSettings();
 
@@ -196,6 +199,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function showSaveStatus(message = "Settings saved!", type = "success") {
+    if (!saveStatus) {
+      console.error("saveStatus element not found");
+      return;
+    }
     saveStatus.textContent = message;
     saveStatus.className = `save-message ${type}`;
     saveStatus.style.opacity = "1";
@@ -246,10 +253,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           // Ignore errors if popup is not open
         });
     });
-  }
-
-  function handleRefreshIntervalChange() {
-    // This function is no longer needed as we handle interval changes through buttons
   }
 
   function handleShowTestButtonChange() {
@@ -338,7 +341,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Play/Pause alert sound
   async function handlePlayPauseSound() {
-    soundErrorMsg.style.display = "none";
+    if (soundErrorMsg) {
+      soundErrorMsg.style.display = "none";
+    }
     chrome.storage.sync.get(
       ["alertSoundType", "alertSoundData"],
       async (data) => {
@@ -356,9 +361,11 @@ document.addEventListener("DOMContentLoaded", async () => {
               playPauseIcon.innerHTML = "&#10073;&#10073;";
             } catch (error) {
               console.error("Error playing default alarm sound:", error);
-              soundErrorMsg.textContent =
-                "Unable to play sound. Please try again or check browser settings.";
-              soundErrorMsg.style.display = "block";
+              if (soundErrorMsg) {
+                soundErrorMsg.textContent =
+                  "Unable to play sound. Please try again or check browser settings.";
+                soundErrorMsg.style.display = "block";
+              }
               testAudio = null;
             }
           } else if (isPlaying) {
@@ -372,17 +379,21 @@ document.addEventListener("DOMContentLoaded", async () => {
               playPauseIcon.innerHTML = "&#10073;&#10073;";
             } catch (error) {
               console.error("Error resuming default alarm sound:", error);
-              soundErrorMsg.textContent =
-                "Unable to resume sound. Please try again.";
-              soundErrorMsg.style.display = "block";
+              if (soundErrorMsg) {
+                soundErrorMsg.textContent =
+                  "Unable to resume sound. Please try again.";
+                soundErrorMsg.style.display = "block";
+              }
             }
           }
         } else if (soundType === "file") {
           chrome.storage.local.get(["alertSoundData"], async (localData) => {
             if (!localData.alertSoundData) {
-              soundErrorMsg.textContent =
-                "No MP3 file selected. Please choose a file first.";
-              soundErrorMsg.style.display = "block";
+              if (soundErrorMsg) {
+                soundErrorMsg.textContent =
+                  "No MP3 file selected. Please choose a file first.";
+                soundErrorMsg.style.display = "block";
+              }
               return;
             }
             if (!testAudio) {
@@ -395,9 +406,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                 playPauseIcon.innerHTML = "&#10073;&#10073;";
               } catch (error) {
                 console.error("Error playing file sound:", error);
-                soundErrorMsg.textContent =
-                  "Unable to play sound file. Please try again.";
-                soundErrorMsg.style.display = "block";
+                if (soundErrorMsg) {
+                  soundErrorMsg.textContent =
+                    "Unable to play sound file. Please try again.";
+                  soundErrorMsg.style.display = "block";
+                }
                 testAudio = null;
               }
             } else if (isPlaying) {
@@ -411,22 +424,28 @@ document.addEventListener("DOMContentLoaded", async () => {
                 playPauseIcon.innerHTML = "&#10073;&#10073;";
               } catch (error) {
                 console.error("Error resuming file sound:", error);
-                soundErrorMsg.textContent =
-                  "Unable to resume sound. Please try again.";
-                soundErrorMsg.style.display = "block";
+                if (soundErrorMsg) {
+                  soundErrorMsg.textContent =
+                    "Unable to resume sound. Please try again.";
+                  soundErrorMsg.style.display = "block";
+                }
               }
             }
           });
         } else if (soundType === "url") {
           if (!data.alertSoundData) {
-            soundErrorMsg.textContent =
-              "No URL provided. Please enter a valid MP3 URL first.";
-            soundErrorMsg.style.display = "block";
+            if (soundErrorMsg) {
+              soundErrorMsg.textContent =
+                "No URL provided. Please enter a valid MP3 URL first.";
+              soundErrorMsg.style.display = "block";
+            }
             return;
           }
           if (!data.alertSoundData.match(/\.mp3($|\?)/i)) {
-            soundErrorMsg.textContent = "URL must end with .mp3";
-            soundErrorMsg.style.display = "block";
+            if (soundErrorMsg) {
+              soundErrorMsg.textContent = "URL must end with .mp3";
+              soundErrorMsg.style.display = "block";
+            }
             return;
           }
           if (!testAudio) {
@@ -439,9 +458,11 @@ document.addEventListener("DOMContentLoaded", async () => {
               playPauseIcon.innerHTML = "&#10073;&#10073;";
             } catch (error) {
               console.error("Error playing URL sound:", error);
-              soundErrorMsg.textContent =
-                "Unable to play sound from URL. Please check the URL and try again.";
-              soundErrorMsg.style.display = "block";
+              if (soundErrorMsg) {
+                soundErrorMsg.textContent =
+                  "Unable to play sound from URL. Please check the URL and try again.";
+                soundErrorMsg.style.display = "block";
+              }
               testAudio = null;
             }
           } else if (isPlaying) {
@@ -455,9 +476,11 @@ document.addEventListener("DOMContentLoaded", async () => {
               playPauseIcon.innerHTML = "&#10073;&#10073;";
             } catch (error) {
               console.error("Error resuming URL sound:", error);
-              soundErrorMsg.textContent =
-                "Unable to resume sound. Please try again.";
-              soundErrorMsg.style.display = "block";
+              if (soundErrorMsg) {
+                soundErrorMsg.textContent =
+                  "Unable to resume sound. Please try again.";
+                soundErrorMsg.style.display = "block";
+              }
             }
           }
         }
@@ -466,7 +489,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function handleStopSound() {
-    soundErrorMsg.style.display = "none";
+    if (soundErrorMsg) {
+      soundErrorMsg.style.display = "none";
+    }
     if (testAudio) {
       testAudio.pause();
       testAudio.currentTime = 0;
@@ -474,8 +499,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       playPauseIcon.innerHTML = "&#9654;";
       testAudio = null;
     } else {
-      soundErrorMsg.textContent = "No sound is playing.";
-      soundErrorMsg.style.display = "block";
+      if (soundErrorMsg) {
+        soundErrorMsg.textContent = "No sound is playing.";
+        soundErrorMsg.style.display = "block";
+      }
     }
   }
 
@@ -799,6 +826,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     authBtn.addEventListener("click", handleAuthButtonClick);
 
+    const clearBtn = document.getElementById("gmailClearBtn");
+    clearBtn.addEventListener("click", handleClearAuth);
+
     testEmailBtn.addEventListener("click", handleTestEmail);
 
     refreshHistoryBtn.addEventListener("click", () => {
@@ -900,6 +930,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Update status text
       authStatusText.textContent = message;
 
+      // Update user name display
+      updateUserNameDisplay(status);
+
       // Update button state and text
       updateAuthButton(status, message);
     }
@@ -959,6 +992,74 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
+    async function updateUserNameDisplay(status) {
+      const userNameElement = document.getElementById("gmailAuthUserName");
+
+      if (status === "authenticated") {
+        try {
+          // Fetch user profile information
+          const response = await new Promise((resolve) => {
+            chrome.runtime.sendMessage(
+              { action: "getGmailUserProfile" },
+              resolve
+            );
+          });
+
+          if (response && response.success && response.profile) {
+            const emailAddress = response.profile.emailAddress;
+            if (userNameElement) {
+              try {
+                userNameElement.textContent = `Authenticated as: ${emailAddress}`;
+                userNameElement.style.display = "block";
+              } catch (e) {
+                console.error(
+                  "Error setting userNameElement textContent or style:",
+                  e
+                );
+              }
+            }
+          } else {
+            if (userNameElement) {
+              try {
+                userNameElement.textContent = "Authenticated user";
+                userNameElement.style.display = "block";
+              } catch (e) {
+                console.error(
+                  "Error setting userNameElement textContent or style:",
+                  e
+                );
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch user profile:", error);
+          if (userNameElement) {
+            try {
+              userNameElement.textContent = "Authenticated user";
+              userNameElement.style.display = "block";
+            } catch (e) {
+              console.error(
+                "Error setting userNameElement textContent or style:",
+                e
+              );
+            }
+          }
+        }
+      } else {
+        if (userNameElement) {
+          try {
+            userNameElement.style.display = "none";
+            userNameElement.textContent = "";
+          } catch (e) {
+            console.error(
+              "Error setting userNameElement textContent or style:",
+              e
+            );
+          }
+        }
+      }
+    }
+
     async function handleAuthButtonClick() {
       const currentStatus = authStatusText.textContent;
 
@@ -997,7 +1098,37 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
+    async function handleClearAuth() {
+      try {
+        // Clear authentication data by sending message to background script
+        const response = await new Promise((resolve) => {
+          chrome.runtime.sendMessage({ action: "clearGmailAuth" }, resolve);
+        });
+
+        if (response && response.success) {
+          // Update UI to show not authenticated status
+          updateAuthStatusUI({
+            status: "not_authenticated",
+            message: "Not Authenticated",
+          });
+          showSaveStatus("Gmail authentication cleared!", "success");
+        } else {
+          const errorMessage =
+            response?.message || "Failed to clear authentication";
+          console.error("Clear auth error:", errorMessage);
+          showSaveStatus("Failed to clear authentication", "error");
+        }
+      } catch (error) {
+        console.error("Clear auth error:", error);
+        showSaveStatus("Failed to clear authentication", "error");
+      }
+    }
+
     async function handleTestEmail() {
+      if (!testEmailStatus) {
+        console.error("testEmailStatus element not found");
+        return;
+      }
       testEmailStatus.style.display = "none";
 
       // Check if authenticated first
@@ -1114,6 +1245,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       const errorElement = document.getElementById("emailError");
       if (errorElement) {
         errorElement.style.display = "none";
+      }
+    }
+  }
+
+  // Load and display extension version
+  function loadExtensionVersion() {
+    const versionElement = document.getElementById("extensionVersion");
+    if (versionElement) {
+      // Get the version from the manifest
+      const manifest = chrome.runtime.getManifest();
+      if (manifest && manifest.version) {
+        versionElement.textContent = `Version: ${manifest.version}`;
+      } else {
+        versionElement.textContent = "Version: Unknown";
       }
     }
   }

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "RHAT",
-  "version": "1.8.2.3",
+  "version": "2.0.0",
   "description": "RaterHub Automated Tasks - Advanced Chrome extension with real-time synchronization, task monitoring, and notifications. Developed by Ahmed Tarek.",
   "author": "Ahmed Tarek",
 
@@ -24,7 +24,11 @@
 
   "oauth2": {
     "client_id": "56474782729-1qlknalo78ofi9unqra2m00cc5lon5pd.apps.googleusercontent.com",
-    "scopes": ["https://www.googleapis.com/auth/gmail.send"]
+    "scopes": [
+      "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile"
+    ]
   },
 
   "background": {

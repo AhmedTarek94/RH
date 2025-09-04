@@ -493,9 +493,15 @@
                       <div class="status-dot" id="gmailAuthStatusDot"></div>
                       <span id="gmailAuthStatusText">Not Authenticated</span>
                     </div>
-                    <button id="gmailAuthBtn" class="btn btn-primary">
-                      Authenticate
-                    </button>
+
+                    <div class="auth-buttons">
+                      <button id="gmailAuthBtn" class="btn btn-primary">
+                        Authenticate
+                      </button>
+                      <button id="gmailClearBtn" class="btn btn-outline">
+                        Clear
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <p class="setting-description">
@@ -611,6 +617,11 @@
           <div class="setting-group">
             <h3>Reset to Defaults</h3>
             <button id="resetBtn" class="reset-btn">Reset All Settings</button>
+          </div>
+
+          <div class="setting-group">
+            <h3>Extension Version</h3>
+            <p id="extensionVersion" class="setting-description">Version:</p>
           </div>
 
           <div class="save-status">
