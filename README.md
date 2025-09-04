@@ -8,6 +8,19 @@ A Chrome extension developed by **Ahmed Tarek** that automates task monitoring, 
 
 ## Version History
 
+### v2.0 - Gmail Notifications Integration
+
+- **Gmail Integration**: Send email notifications when tasks are available
+- **OAuth2 Authentication**: Secure Gmail API integration with user consent
+- **Email Templates**: Customizable notification templates for different task types
+- **Notification History**: Track all sent notifications with timestamps and status
+- **Enhanced Options Page**: New Gmail settings tab with authentication status
+- **Form Validation**: Improved email input validation and error handling
+- **Real-time Auth Status**: Live authentication status updates in options page
+- **Test Email Functionality**: Send test emails to verify Gmail integration
+- **Secure Token Management**: Proper OAuth2 token storage and refresh handling
+- **Permission Updates**: Updated manifest.json with Gmail API permissions
+
 ### v1.8.2.3 - Stability and Performance Improvements
 
 - **Code Optimization**: Streamlined file handling and validation logic
@@ -61,7 +74,11 @@ A Chrome extension developed by **Ahmed Tarek** that automates task monitoring, 
 ## Features
 
 - **Automatic Task Monitoring**: Continuously checks for available tasks
-- **Smart Notifications**: Audio alerts and desktop notifications
+- **Smart Notifications**: Audio alerts, desktop notifications, and email notifications
+- **Gmail Integration**: Send email notifications when tasks become available
+- **OAuth2 Authentication**: Secure Gmail API integration with user consent
+- **Email Templates**: Customizable notification templates for different task types
+- **Notification History**: Track all sent notifications with timestamps and status
 - **Auto-Acquire Mode**: Automatically clicks "Acquire" when tasks are available
 - **Advanced Task Filtering**: Comprehensive filtering system with custom rules
 - **Performance Analytics**: Track task completion rates, earnings, and performance metrics
