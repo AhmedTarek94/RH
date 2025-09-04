@@ -428,7 +428,112 @@
 
         <!-- Notifications Tab -->
         <div id="notifications" class="tab-content">
-          <!-- Empty notifications tab content -->
+          <section class="settings-section">
+            <div class="section-header">
+              <h2 class="section-title">Gmail Notifications</h2>
+              <p class="section-description">
+                Configure email notifications for task detection events
+              </p>
+            </div>
+
+            <div class="settings-grid">
+              <div class="setting-card">
+                <div class="setting-header">
+                  <h3 class="setting-title">Enable Gmail Notifications</h3>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="gmailNotificationsToggle" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <p class="setting-description">
+                  Send email notifications when tasks become available
+                </p>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-header">
+                  <h3 class="setting-title">Notification Email</h3>
+                  <div class="input-group">
+                    <input
+                      type="email"
+                      id="notificationEmailInput"
+                      class="styled-input"
+                      placeholder="your.email@example.com"
+                      pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                    />
+                  </div>
+                </div>
+                <p class="setting-description">
+                  Email address where notifications will be sent
+                </p>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-header">
+                  <h3 class="setting-title">Gmail Authentication</h3>
+                  <div class="auth-status-container">
+                    <div class="status-indicator">
+                      <div class="status-dot" id="gmailAuthStatusDot"></div>
+                      <span id="gmailAuthStatusText">Not Authenticated</span>
+                    </div>
+                    <button id="gmailAuthBtn" class="btn btn-primary">
+                      Authenticate
+                    </button>
+                  </div>
+                </div>
+                <p class="setting-description">
+                  Connect your Gmail account to send notifications
+                </p>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-header">
+                  <h3 class="setting-title">Test Email</h3>
+                  <button id="testEmailBtn" class="btn btn-secondary">
+                    Send Test Email
+                  </button>
+                </div>
+                <p class="setting-description">
+                  Send a test email to verify your Gmail setup
+                </p>
+                <div
+                  id="testEmailStatus"
+                  class="status-message"
+                  style="display: none"
+                ></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div class="section-header">
+              <h2 class="section-title">Notification History</h2>
+              <p class="section-description">
+                View recent email notifications and their status
+              </p>
+            </div>
+
+            <div class="settings-grid">
+              <div class="setting-card full-width">
+                <div class="setting-header">
+                  <h3 class="setting-title">Recent Notifications</h3>
+                  <button id="refreshHistoryBtn" class="btn btn-outline">
+                    Refresh
+                  </button>
+                </div>
+                <div id="notificationHistory" class="notification-history">
+                  <div class="history-item">
+                    <div class="history-content">
+                      <div class="history-title">No notifications sent yet</div>
+                      <div class="history-meta">
+                        Configure Gmail notifications to see history
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
 
         <section class="info-section">
