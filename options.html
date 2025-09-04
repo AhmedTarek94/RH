@@ -453,15 +453,32 @@
               <div class="setting-card">
                 <div class="setting-header">
                   <h3 class="setting-title">Notification Email</h3>
-                  <div class="input-group">
-                    <input
-                      type="email"
-                      id="notificationEmailInput"
-                      class="styled-input"
-                      placeholder="your.email@example.com"
-                      pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
-                    />
-                  </div>
+                  <form id="notificationEmailForm" novalidate>
+                    <div class="input-group">
+                      <input
+                        type="email"
+                        id="notificationEmailInput"
+                        class="styled-input"
+                        placeholder="your.email@example.com"
+                        pattern="^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$"
+                        required
+                      />
+                      <button
+                        type="submit"
+                        class="btn btn-primary"
+                        id="saveEmailBtn"
+                      >
+                        Save
+                      </button>
+                    </div>
+                    <div
+                      id="emailErrorMsg"
+                      class="error-message"
+                      style="display: none"
+                    >
+                      Please enter a valid email address.
+                    </div>
+                  </form>
                 </div>
                 <p class="setting-description">
                   Email address where notifications will be sent

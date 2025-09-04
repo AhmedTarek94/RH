@@ -23,7 +23,7 @@
   ],
 
   "oauth2": {
-    "client_id": "YOUR_CLIENT_ID_HERE",
+    "client_id": "56474782729-1qlknalo78ofi9unqra2m00cc5lon5pd.apps.googleusercontent.com",
     "scopes": ["https://www.googleapis.com/auth/gmail.send"]
   },
 

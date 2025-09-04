@@ -758,52 +758,48 @@ document.addEventListener("DOMContentLoaded", async () => {
     const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
     const notificationHistory = document.getElementById("notificationHistory");
 
-    // Load initial settings
-    chrome.storage.sync.get(
-      ["enableGmailNotifications", "notificationEmail", "gmailAuthStatus"],
-      (data) => {
-        gmailToggle.checked = data.enableGmailNotifications || false;
-        emailInput.value = data.notificationEmail || "";
-        updateAuthStatusUI(data.gmailAuthStatus || "unauthenticated");
-      }
-    );
+    // Load initial settings and check authentication status
+    loadGmailSettings();
 
     // Event listeners
     gmailToggle.addEventListener("change", () => {
       chrome.storage.sync.set({
         enableGmailNotifications: gmailToggle.checked,
       });
+      showSaveStatus();
     });
 
-    emailInput.addEventListener("input", () => {
-      chrome.storage.sync.set({ notificationEmail: emailInput.value });
-    });
+    // Remove automatic saving on input change - will save only when save button is clicked
 
-    authBtn.addEventListener("click", () => {
-      // Trigger Gmail authentication flow
-      chrome.runtime.sendMessage(
-        { action: "gmailAuthenticate" },
-        (response) => {
-          if (response && response.status) {
-            updateAuthStatusUI(response.status);
-          }
-        }
-      );
-    });
+    // Handle form submission for email save button
+    const emailForm = document.getElementById("notificationEmailForm");
+    emailForm.addEventListener("submit", (e) => {
+      e.preventDefault(); // Prevent page reload
+      const emailValue = emailInput.value.trim();
 
-    testEmailBtn.addEventListener("click", () => {
-      testEmailStatus.style.display = "none";
-      chrome.runtime.sendMessage({ action: "sendTestEmail" }, (response) => {
-        if (response && response.success) {
-          testEmailStatus.textContent = "Test email sent successfully.";
-          testEmailStatus.style.color = "green";
-        } else {
-          testEmailStatus.textContent = "Failed to send test email.";
-          testEmailStatus.style.color = "red";
-        }
-        testEmailStatus.style.display = "block";
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailValue) {
+        showEmailError("Please enter an email address.");
+        return;
+      }
+      if (!emailRegex.test(emailValue)) {
+        showEmailError("Please enter a valid email address.");
+        return;
+      }
+
+      // Clear any previous error
+      clearEmailError();
+
+      // Save the email
+      chrome.storage.sync.set({ notificationEmail: emailValue }, () => {
+        showSaveStatus("Email address saved successfully!", "success");
       });
     });
+
+    authBtn.addEventListener("click", handleAuthButtonClick);
+
+    testEmailBtn.addEventListener("click", handleTestEmail);
 
     refreshHistoryBtn.addEventListener("click", () => {
       loadNotificationHistory();
@@ -812,15 +808,251 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Load notification history initially
     loadNotificationHistory();
 
-    function updateAuthStatusUI(status) {
+    // Check authentication status more frequently for better responsiveness
+    setInterval(checkAuthenticationStatus, 2000); // Check every 2 seconds
+
+    // Also check immediately when page loads and when tab becomes visible
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        checkAuthenticationStatus();
+      }
+    });
+
+    // Check status when Gmail tab becomes active
+    const gmailTab = document.querySelector('[data-tab="gmail-notifications"]');
+    if (gmailTab) {
+      gmailTab.addEventListener("click", () => {
+        setTimeout(checkAuthenticationStatus, 100); // Small delay to ensure tab is active
+      });
+    }
+
+    // Listen for authentication status changes from background script
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.action === "authStatusChanged") {
+        console.log(
+          "Options: Received auth status change:",
+          message.authStatus
+        );
+        updateAuthStatusUI(message.authStatus);
+        return true;
+      }
+    });
+
+    function loadGmailSettings() {
+      chrome.storage.sync.get(
+        ["enableGmailNotifications", "notificationEmail"],
+        (data) => {
+          gmailToggle.checked = data.enableGmailNotifications || false;
+          emailInput.value = data.notificationEmail || "";
+        }
+      );
+
+      // Check current authentication status
+      checkAuthenticationStatus();
+    }
+
+    async function checkAuthenticationStatus() {
+      try {
+        const response = await new Promise((resolve) => {
+          chrome.runtime.sendMessage({ action: "getGmailAuthStatus" }, resolve);
+        });
+
+        if (response && response.authStatus) {
+          updateAuthStatusUI(response.authStatus);
+        } else {
+          // Fallback to stored status if service worker is not available
+          chrome.storage.sync.get(["gmailAuthStatus"], (data) => {
+            updateAuthStatusUI({
+              status: data.gmailAuthStatus || "not_authenticated",
+            });
+          });
+        }
+      } catch (error) {
+        console.error("Failed to check authentication status:", error);
+        updateAuthStatusUI({
+          status: "error",
+          message: "Unable to check status",
+        });
+      }
+    }
+
+    function updateAuthStatusUI(authStatus) {
+      const status = authStatus.status || "not_authenticated";
+      const message = authStatus.message || getDefaultStatusMessage(status);
+
+      // Update status dot
       if (status === "authenticated") {
         authStatusDot.classList.add("active");
-        authStatusText.textContent = "Authenticated";
-        authBtn.disabled = true;
+        authStatusDot.classList.remove("warning", "error");
+      } else if (
+        status === "token_expired" ||
+        status === "authentication_required"
+      ) {
+        authStatusDot.classList.add("warning");
+        authStatusDot.classList.remove("active", "error");
+      } else if (status === "error" || status.includes("error")) {
+        authStatusDot.classList.add("error");
+        authStatusDot.classList.remove("active", "warning");
       } else {
-        authStatusDot.classList.remove("active");
-        authStatusText.textContent = "Not Authenticated";
-        authBtn.disabled = false;
+        authStatusDot.classList.remove("active", "warning", "error");
+      }
+
+      // Update status text
+      authStatusText.textContent = message;
+
+      // Update button state and text
+      updateAuthButton(status, message);
+    }
+
+    function getDefaultStatusMessage(status) {
+      switch (status) {
+        case "not_authenticated":
+          return "Not Authenticated";
+        case "authenticating":
+          return "Authenticating...";
+        case "authenticated":
+          return "Authenticated";
+        case "token_expired":
+          return "Token Expired";
+        case "authentication_required":
+          return "Re-authentication Required";
+        case "authentication_error":
+          return "Authentication Error";
+        case "authentication_failed":
+          return "Authentication Failed";
+        default:
+          return "Unknown Status";
+      }
+    }
+
+    function updateAuthButton(status, message) {
+      switch (status) {
+        case "authenticated":
+          authBtn.textContent = "Re-authenticate";
+          authBtn.disabled = false;
+          authBtn.title = "Re-authenticate with Gmail";
+          break;
+        case "authenticating":
+          authBtn.textContent = "Authenticating...";
+          authBtn.disabled = true;
+          authBtn.title = "Authentication in progress";
+          break;
+        case "token_expired":
+        case "authentication_required":
+          authBtn.textContent = "Re-authenticate";
+          authBtn.disabled = false;
+          authBtn.title =
+            "Your authentication has expired. Click to re-authenticate.";
+          break;
+        case "error":
+        case "authentication_error":
+        case "authentication_failed":
+          authBtn.textContent = "Try Again";
+          authBtn.disabled = false;
+          authBtn.title = "Authentication failed. Click to try again.";
+          break;
+        default:
+          authBtn.textContent = "Authenticate";
+          authBtn.disabled = false;
+          authBtn.title = "Authenticate with Gmail";
+          break;
+      }
+    }
+
+    async function handleAuthButtonClick() {
+      const currentStatus = authStatusText.textContent;
+
+      // Update UI to show authentication in progress
+      updateAuthStatusUI({
+        status: "authenticating",
+        message: "Authenticating...",
+      });
+
+      try {
+        const response = await new Promise((resolve) => {
+          chrome.runtime.sendMessage({ action: "gmailAuthenticate" }, resolve);
+        });
+
+        if (response && response.success) {
+          updateAuthStatusUI({
+            status: "authenticated",
+            message: "Authenticated",
+          });
+          showSaveStatus("Gmail authentication successful!", "success");
+        } else {
+          const errorMessage = response?.message || "Authentication failed";
+          updateAuthStatusUI({
+            status: "authentication_error",
+            message: errorMessage,
+          });
+          showSaveStatus("Authentication failed", "error");
+        }
+      } catch (error) {
+        console.error("Authentication error:", error);
+        updateAuthStatusUI({
+          status: "authentication_error",
+          message: "Authentication failed",
+        });
+        showSaveStatus("Authentication failed", "error");
+      }
+    }
+
+    async function handleTestEmail() {
+      testEmailStatus.style.display = "none";
+
+      // Check if authenticated first
+      const authStatus = await getCurrentAuthStatus();
+      if (!authStatus.authenticated) {
+        testEmailStatus.textContent = "Please authenticate with Gmail first.";
+        testEmailStatus.style.color = "red";
+        testEmailStatus.style.display = "block";
+        return;
+      }
+
+      // Check if email is configured
+      if (!emailInput.value.trim()) {
+        testEmailStatus.textContent =
+          "Please enter a notification email address first.";
+        testEmailStatus.style.color = "red";
+        testEmailStatus.style.display = "block";
+        return;
+      }
+
+      testEmailStatus.textContent = "Sending test email...";
+      testEmailStatus.style.color = "blue";
+      testEmailStatus.style.display = "block";
+
+      try {
+        const response = await new Promise((resolve) => {
+          chrome.runtime.sendMessage({ action: "sendTestEmail" }, resolve);
+        });
+
+        if (response && response.success) {
+          testEmailStatus.textContent = "Test email sent successfully!";
+          testEmailStatus.style.color = "green";
+          showSaveStatus("Test email sent!", "success");
+        } else {
+          const errorMessage = response?.message || "Failed to send test email";
+          testEmailStatus.textContent = errorMessage;
+          testEmailStatus.style.color = "red";
+          showSaveStatus("Test email failed", "error");
+        }
+      } catch (error) {
+        console.error("Test email error:", error);
+        testEmailStatus.textContent = "Failed to send test email.";
+        testEmailStatus.style.color = "red";
+        showSaveStatus("Test email failed", "error");
+      }
+    }
+
+    async function getCurrentAuthStatus() {
+      try {
+        const response = await new Promise((resolve) => {
+          chrome.runtime.sendMessage({ action: "getGmailAuthStatus" }, resolve);
+        });
+        return response?.authStatus || { authenticated: false };
+      } catch (error) {
+        return { authenticated: false };
       }
     }
 
@@ -868,6 +1100,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             notificationHistory.appendChild(itemDiv);
           });
       });
+    }
+
+    function showEmailError(message) {
+      const errorElement = document.getElementById("emailError");
+      if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = "block";
+      }
+    }
+
+    function clearEmailError() {
+      const errorElement = document.getElementById("emailError");
+      if (errorElement) {
+        errorElement.style.display = "none";
+      }
     }
   }
 

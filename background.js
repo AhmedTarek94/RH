@@ -18,7 +18,7 @@ chrome.runtime.onInstalled.addListener(() => {
     enableErrorDetection: true, // Enable enhanced error detection
     darkThemeEnabled: true, // Dark theme setting
     // Gmail integration settings
-    gmailNotificationsEnabled: false, // Enable Gmail notifications
+    enableGmailNotifications: false, // Enable Gmail notifications
     notificationEmail: "", // Email address for notifications
     gmailAuthStatus: "not_authenticated", // Authentication status
   };
@@ -394,6 +394,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // Handle Gmail authentication status requests
+  if (message.action === "getGmailAuthStatus") {
+    console.log("Background: Received Gmail auth status request");
+    handleGetGmailAuthStatus(sendResponse);
+    return true;
+  }
+
+  // Handle Gmail authentication clearing
+  if (message.action === "clearGmailAuth") {
+    console.log("Background: Received clear Gmail auth request");
+    handleClearGmailAuth(sendResponse);
+    return true;
+  }
+
+  // Handle immediate authentication status check
+  if (message.action === "checkAuthStatus") {
+    console.log("Background: Received immediate auth status check");
+    handleImmediateAuthStatusCheck(sendResponse);
+    return true;
+  }
+
   return false;
 });
 
@@ -712,13 +733,23 @@ async function playAlarmInBackground() {
     console.log("Background: Requesting alarm playback via offscreen document");
 
     // Get current settings to determine sound type
-    const settings = await new Promise((resolve) => {
+    const syncSettings = await new Promise((resolve) => {
       chrome.storage.sync.get(["alertSoundType", "alertSoundData"], resolve);
     });
 
+    let settings = { ...syncSettings };
+
+    // If sound type is file, get data from local storage
+    if (settings.alertSoundType === "file") {
+      const localData = await new Promise((resolve) => {
+        chrome.storage.local.get(["alertSoundData"], resolve);
+      });
+      settings.alertSoundData = localData.alertSoundData || "";
+    }
+
     console.log("Background: Sound settings:", {
       alertSoundType: settings.alertSoundType,
-      alertSoundData: settings.alertSoundData,
+      alertSoundData: settings.alertSoundData ? "data available" : "no data",
     });
 
     // Ensure offscreen document is created
@@ -847,20 +878,148 @@ function createFallbackNotification() {
   );
 }
 
+function createAuthRequiredNotification() {
+  // Create a notification to inform user about authentication requirement
+  chrome.notifications.create(
+    {
+      type: "basic",
+      iconUrl: chrome.runtime.getURL("icon.png"),
+      title: "RHAT - Gmail Authentication Required",
+      message: "Please authenticate with Gmail to enable email notifications.",
+      priority: 2,
+      requireInteraction: true,
+    },
+    (notificationId) => {
+      if (chrome.runtime.lastError) {
+        console.error(
+          "Background: Auth notification error:",
+          chrome.runtime.lastError
+        );
+      } else {
+        console.log(
+          "Background: Auth required notification created:",
+          notificationId
+        );
+      }
+    }
+  );
+}
+
 // Gmail integration functions
+
+// Authentication status management
+function getAuthenticationStatusIndicator() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(
+      [
+        "gmailAuthStatus",
+        "gmailAuthError",
+        "gmailAuthTimestamp",
+        "gmailAuthToken",
+      ],
+      (data) => {
+        const status = {
+          status: data.gmailAuthStatus || "not_authenticated",
+          isAuthenticated: data.gmailAuthStatus === "authenticated",
+          isAuthenticating: data.gmailAuthStatus === "authenticating",
+          hasError:
+            data.gmailAuthStatus === "authentication_error" ||
+            data.gmailAuthStatus === "authentication_failed",
+          error: data.gmailAuthError || null,
+          timestamp: data.gmailAuthTimestamp || null,
+          hasToken: !!data.gmailAuthToken,
+          // Human-readable status message
+          message: getStatusMessage(data.gmailAuthStatus, data.gmailAuthError),
+        };
+        resolve(status);
+      }
+    );
+  });
+}
+
+function getStatusMessage(status, error) {
+  switch (status) {
+    case "not_authenticated":
+      return "Not authenticated with Gmail";
+    case "authenticating":
+      return "Authenticating with Gmail...";
+    case "authenticated":
+      return "Successfully authenticated with Gmail";
+    case "authentication_failed":
+      return "Authentication failed - no token received";
+    case "authentication_error":
+      return error?.userMessage || "Authentication error occurred";
+    case "authentication_required":
+      return "Re-authentication required";
+    default:
+      return "Unknown authentication status";
+  }
+}
+
+// Broadcast authentication status changes to all extension components
+function broadcastAuthStatusChange() {
+  getAuthenticationStatusIndicator().then((status) => {
+    const authMessage = {
+      action: "authStatusChanged",
+      authStatus: status,
+      source: "background",
+    };
+
+    // Send to all extension pages (options, popup, etc.)
+    chrome.runtime.sendMessage(authMessage).catch((error) => {
+      console.log("No extension pages open to receive auth status change");
+    });
+
+    // Also notify content scripts if needed
+    chrome.tabs.query(
+      { url: "https://www.raterhub.com/evaluation/rater*" },
+      (tabs) => {
+        tabs.forEach((tab) => {
+          chrome.tabs.sendMessage(tab.id, authMessage).catch((error) => {
+            console.log(`Content script not ready in tab ${tab.id}:`, error);
+          });
+        });
+      }
+    );
+  });
+}
+
 async function handleTaskDetected(taskData) {
   try {
     console.log("Background: Handling task detection for Gmail notifications");
 
+    // Check authentication status first
+    const authStatus = await getAuthenticationStatusIndicator();
+
+    if (!authStatus.isAuthenticated) {
+      console.log(
+        "Background: Not authenticated with Gmail, skipping notification"
+      );
+
+      // Notify user about authentication requirement
+      createAuthRequiredNotification();
+
+      // Update status to indicate re-authentication is needed
+      chrome.storage.sync.set({
+        gmailAuthStatus: "authentication_required",
+        gmailAuthTimestamp: new Date().toISOString(),
+      });
+
+      // Broadcast the status change
+      broadcastAuthStatusChange();
+
+      return;
+    }
+
     // Get Gmail settings
     const settings = await new Promise((resolve) => {
       chrome.storage.sync.get(
-        ["gmailNotificationsEnabled", "notificationEmail"],
+        ["enableGmailNotifications", "notificationEmail"],
         resolve
       );
     });
 
-    if (!settings.gmailNotificationsEnabled || !settings.notificationEmail) {
+    if (!settings.enableGmailNotifications || !settings.notificationEmail) {
       console.log(
         "Background: Gmail notifications disabled or no email configured"
       );
@@ -891,47 +1050,114 @@ async function handleTaskDetected(taskData) {
   } catch (error) {
     console.error("Background: Failed to send task notification email:", error);
 
-    // Handle authentication errors
+    // Handle authentication errors with detailed status updates
     if (
       error.message.includes("invalid_grant") ||
-      error.message.includes("401")
+      error.message.includes("401") ||
+      error.message.includes("unauthorized")
     ) {
       console.log("Background: Gmail authentication error detected");
-      chrome.storage.sync.set({ gmailAuthStatus: "authentication_required" });
+
+      const errorDetails = {
+        type: "AUTH_EXPIRED",
+        message: error.message,
+        userMessage:
+          "Your Gmail authentication has expired. Please re-authenticate.",
+        timestamp: new Date().toISOString(),
+      };
+
+      chrome.storage.sync.set({
+        gmailAuthStatus: "authentication_required",
+        gmailAuthError: errorDetails,
+        gmailAuthTimestamp: new Date().toISOString(),
+      });
+
+      // Broadcast the status change
+      broadcastAuthStatusChange();
+
+      // Show notification to user
+      createAuthRequiredNotification();
+    } else {
+      // Handle other types of errors
+      console.log(
+        "Background: Non-authentication error in task notification:",
+        error
+      );
+
+      // Create a general error notification
+      chrome.notifications.create({
+        type: "basic",
+        iconUrl: chrome.runtime.getURL("icon.png"),
+        title: "RHAT - Email Notification Failed",
+        message:
+          "Failed to send task notification email. Check console for details.",
+        priority: 1,
+      });
     }
   }
 }
 
 async function handleGmailAuthentication(sendResponse) {
   try {
-    console.log("Background: Starting Gmail authentication");
+    console.log("Background: Starting Gmail authentication via AuthService");
 
-    const authResult = await AuthService.authenticate();
+    // Update status to authenticating
+    await updateAuthStatus("authenticating");
 
-    if (authResult) {
-      console.log("Background: Gmail authentication successful");
-      chrome.storage.sync.set({
-        gmailAuthStatus: "authenticated",
-        gmailAuthToken: authResult.access_token,
-      });
-      sendResponse({
-        success: true,
-        message: "Gmail authentication successful",
-      });
-    } else {
-      console.log("Background: Gmail authentication failed");
-      chrome.storage.sync.set({ gmailAuthStatus: "authentication_failed" });
-      sendResponse({ success: false, message: "Gmail authentication failed" });
-    }
+    // Delegate authentication to the unified AuthService
+    const token = await AuthService.authenticate(true);
+
+    console.log("Background: Gmail authentication successful via AuthService");
+
+    // Update status to authenticated
+    await updateAuthStatus("authenticated");
+
+    // Broadcast status change
+    broadcastAuthStatusChange();
+
+    sendResponse({
+      success: true,
+      message: "Gmail authentication successful",
+      status: "authenticated",
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
-    console.error("Background: Gmail authentication error:", error);
-    chrome.storage.sync.set({ gmailAuthStatus: "authentication_error" });
-    sendResponse({ success: false, message: error.message });
+    console.error("Background: Gmail authentication failed:", error);
+
+    // Update status to error
+    await updateAuthStatus("authentication_error");
+
+    // Store error details
+    chrome.storage.sync.set({
+      gmailAuthError: {
+        type: error.type,
+        message: error.message,
+        userMessage: error.userMessage,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    // Broadcast status change
+    broadcastAuthStatusChange();
+
+    sendResponse({
+      success: false,
+      message: error.userMessage || error.message,
+      status: "authentication_error",
+      error: {
+        type: error.type,
+        message: error.message,
+        userMessage: error.userMessage,
+        timestamp: error.timestamp,
+      },
+    });
   }
 }
 
 async function handleTestEmail(sendResponse) {
   try {
+    console.log("Background: Starting enhanced test email process");
+
     // Get the notification email from storage
     const settings = await new Promise((resolve) => {
       chrome.storage.sync.get(["notificationEmail"], resolve);
@@ -941,6 +1167,7 @@ async function handleTestEmail(sendResponse) {
       sendResponse({
         success: false,
         message: "No notification email configured",
+        errorType: "INVALID_INPUT",
       });
       return;
     }
@@ -950,13 +1177,224 @@ async function handleTestEmail(sendResponse) {
       settings.notificationEmail
     );
 
+    // Send the email using the enhanced GmailService
     const result = await GmailService.sendTestEmail(settings.notificationEmail);
 
     console.log("Background: Test email sent successfully:", result.id);
-    sendResponse({ success: true, message: "Test email sent successfully" });
+    sendResponse({
+      success: true,
+      message: "Test email sent successfully",
+      emailId: result.id,
+    });
   } catch (error) {
     console.error("Background: Failed to send test email:", error);
-    sendResponse({ success: false, message: error.message });
+
+    // Use enhanced error handling with user-friendly messages
+    const errorResponse = {
+      success: false,
+      message: getUserFriendlyErrorMessage(error),
+      errorType: error.type || "UNKNOWN_ERROR",
+    };
+
+    // Handle authentication errors specially
+    if (
+      error.type === "AUTHENTICATION_ERROR" ||
+      error.type === "TOKEN_EXPIRED"
+    ) {
+      await handleAuthenticationError();
+      errorResponse.message += " Please try authenticating again.";
+    }
+
+    sendResponse(errorResponse);
+  }
+}
+
+// Enhanced error message helper
+function getUserFriendlyErrorMessage(error) {
+  switch (error.type) {
+    case "NETWORK_ERROR":
+      return "Network error: Unable to connect to Gmail API. Check your internet connection.";
+    case "AUTHENTICATION_ERROR":
+      return "Authentication error: Your Gmail token has expired. Please re-authenticate.";
+    case "TOKEN_EXPIRED":
+      return "Authentication expired: Please re-authenticate with Gmail.";
+    case "PERMISSION_ERROR":
+      return "Permission error: Gmail API access denied. Check your OAuth permissions.";
+    case "RATE_LIMIT_ERROR":
+      return "Rate limit exceeded: Too many requests. Please wait before trying again.";
+    case "INVALID_INPUT":
+      return "Invalid input: Please check your email address and try again.";
+    case "SERVICE_UNAVAILABLE":
+      return "Gmail service is temporarily unavailable. Please try again later.";
+    default:
+      return (
+        error.message || "An unexpected error occurred while sending the email."
+      );
+  }
+}
+
+// Handle authentication errors with recovery
+async function handleAuthenticationError() {
+  console.log("Background: Handling authentication error");
+
+  // Clear invalid token
+  await new Promise((resolve) => {
+    chrome.storage.sync.remove(["gmailAuthToken"], resolve);
+  });
+
+  // Update authentication status
+  await updateAuthStatus("authentication_required");
+
+  // Notify user
+  createAuthRequiredNotification();
+}
+
+// Update authentication status
+async function updateAuthStatus(status) {
+  return new Promise((resolve) => {
+    chrome.storage.sync.set(
+      {
+        gmailAuthStatus: status,
+        gmailAuthTimestamp: new Date().toISOString(),
+      },
+      resolve
+    );
+  });
+}
+
+// New handler for getting Gmail authentication status
+async function handleGetGmailAuthStatus(sendResponse) {
+  try {
+    console.log("Background: Getting Gmail authentication status");
+
+    const authStatus = await GmailService.getAuthenticationStatus();
+
+    sendResponse({
+      success: true,
+      authStatus: authStatus,
+    });
+  } catch (error) {
+    console.error("Background: Failed to get Gmail auth status:", error);
+
+    sendResponse({
+      success: false,
+      message: "Failed to retrieve authentication status",
+      error: error.message,
+    });
+  }
+}
+
+// New handler for clearing Gmail authentication
+async function handleClearGmailAuth(sendResponse) {
+  try {
+    console.log("Background: Clearing Gmail authentication");
+
+    await GmailService.clearAuthentication();
+
+    // Update status
+    await updateAuthStatus("not_authenticated");
+
+    // Broadcast status change
+    broadcastAuthStatusChange();
+
+    sendResponse({
+      success: true,
+      message: "Gmail authentication cleared successfully",
+    });
+  } catch (error) {
+    console.error("Background: Failed to clear Gmail auth:", error);
+
+    sendResponse({
+      success: false,
+      message: "Failed to clear authentication",
+      error: error.message,
+    });
+  }
+}
+
+// New handler for immediate authentication status check
+async function handleImmediateAuthStatusCheck(sendResponse) {
+  try {
+    console.log("Background: Performing immediate authentication status check");
+
+    const authStatus = await getAuthenticationStatusIndicator();
+
+    // Also check if the token is still valid by making a test API call
+    if (authStatus.isAuthenticated) {
+      try {
+        // Make a simple API call to verify token validity
+        const tokenCheck = await GmailService.verifyToken();
+        if (!tokenCheck.valid) {
+          console.log("Background: Token verification failed, updating status");
+
+          // Update status to indicate re-authentication is needed
+          chrome.storage.sync.set({
+            gmailAuthStatus: "authentication_required",
+            gmailAuthError: {
+              type: "TOKEN_EXPIRED",
+              message: "Token verification failed",
+              userMessage:
+                "Your authentication has expired. Please re-authenticate.",
+              timestamp: new Date().toISOString(),
+            },
+            gmailAuthTimestamp: new Date().toISOString(),
+          });
+
+          // Broadcast the status change
+          broadcastAuthStatusChange();
+
+          // Return updated status
+          const updatedStatus = await getAuthenticationStatusIndicator();
+          sendResponse({
+            success: true,
+            authStatus: updatedStatus,
+          });
+          return;
+        }
+      } catch (error) {
+        console.error("Background: Token verification error:", error);
+
+        // Update status on verification error
+        chrome.storage.sync.set({
+          gmailAuthStatus: "authentication_required",
+          gmailAuthError: {
+            type: "TOKEN_VERIFICATION_ERROR",
+            message: error.message,
+            userMessage:
+              "Unable to verify authentication. Please re-authenticate.",
+            timestamp: new Date().toISOString(),
+          },
+          gmailAuthTimestamp: new Date().toISOString(),
+        });
+
+        // Broadcast the status change
+        broadcastAuthStatusChange();
+
+        // Return updated status
+        const updatedStatus = await getAuthenticationStatusIndicator();
+        sendResponse({
+          success: true,
+          authStatus: updatedStatus,
+        });
+        return;
+      }
+    }
+
+    sendResponse({
+      success: true,
+      authStatus: authStatus,
+    });
+  } catch (error) {
+    console.error(
+      "Background: Failed to perform immediate auth status check:",
+      error
+    );
+
+    sendResponse({
+      success: false,
+      message: "Failed to check authentication status",
+      error: error.message,
+    });
   }
 }
 
