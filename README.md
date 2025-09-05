@@ -8,6 +8,13 @@ A Chrome extension developed by **Ahmed Tarek** that automates task monitoring, 
 
 ## Version History
 
+### v2.2.2 - Test Switch Improvements
+
+- **Test Switch Positioning**: Moved test toggle to upper right corner of options page header
+- **Enhanced Styling**: Updated test switch with yellow inactive and light green active colors
+- **Improved Functionality**: Fixed test switch event handling and visual state management
+- **UI Optimization**: Better alignment and spacing for test switch in header
+
 ### v2.2.1 - UI Enhancements
 
 - **Scrollable Notifications**: Added scrollable container for Recent Notifications history showing 4 entries at a time
