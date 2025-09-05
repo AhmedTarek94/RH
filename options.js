@@ -58,10 +58,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   playPauseSoundBtn.addEventListener("click", handlePlayPauseSound);
   stopSoundBtn.addEventListener("click", handleStopSound);
 
-  // Test button toggle
-  document
-    .getElementById("showTestButton")
-    .addEventListener("change", handleShowTestButtonChange);
+  // Test switch toggle
+  const testSwitchLabel = document.getElementById("testSwitchLabel");
+  const testSwitchSlider = document.getElementById("testSwitchSlider");
+  if (testSwitchLabel && testSwitchSlider) {
+    testSwitchLabel.addEventListener("click", handleTestSwitchToggle);
+  }
 
   // Sound source select
   document
@@ -123,8 +125,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Update sound source
         document.getElementById("soundSourceSelect").value =
           data.alertSoundType || "default";
-        document.getElementById("showTestButton").checked =
-          data.showTestButton || false;
+        const testSwitchSlider = document.getElementById("testSwitchSlider");
+        if (testSwitchSlider) {
+          if (data.showTestButton) {
+            testSwitchSlider.classList.add("checked");
+          } else {
+            testSwitchSlider.classList.remove("checked");
+          }
+        }
 
         // Load persistent file name only if sound source is file and name exists
         if (data.alertSoundType === "file" && data.alertSoundFileName) {
@@ -255,9 +263,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  function handleShowTestButtonChange() {
-    const showTestButton = document.getElementById("showTestButton").checked;
-    chrome.storage.sync.set({ showTestButton }, () => {
+  function handleTestSwitchToggle() {
+    const testSwitchSlider = document.getElementById("testSwitchSlider");
+    if (!testSwitchSlider) return;
+
+    const isChecked = testSwitchSlider.classList.contains("checked");
+    const newValue = !isChecked;
+
+    if (newValue) {
+      testSwitchSlider.classList.add("checked");
+    } else {
+      testSwitchSlider.classList.remove("checked");
+    }
+
+    chrome.storage.sync.set({ showTestButton: newValue }, () => {
       showSaveStatus();
       notifyContentScript();
     });
@@ -729,7 +748,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           break;
 
         case "showTestButton":
-          document.getElementById("showTestButton").checked = message.value;
+          const testSwitchSlider = document.getElementById("testSwitchSlider");
+          if (testSwitchSlider) {
+            if (message.value) {
+              testSwitchSlider.classList.add("checked");
+            } else {
+              testSwitchSlider.classList.remove("checked");
+            }
+          }
           break;
         case "enableDesktopNotifications":
           desktopNotificationsToggle.checked = message.value;

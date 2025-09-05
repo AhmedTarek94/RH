@@ -37,7 +37,7 @@
         display: inline-block;
         width: 44px;
         height: 24px;
-        background-color: var(--gray-300);
+        background-color: #ffeb3b; /* yellow for inactive */
         border-radius: 24px;
         transition: 0.3s;
         cursor: pointer;
@@ -64,6 +64,14 @@
         transform: translateX(20px);
       }
 
+      .toggle-slider.checked {
+        background-color: #81c784; /* light green for active */
+      }
+
+      .toggle-slider.checked:before {
+        transform: translateX(20px);
+      }
+
       .reset-btn {
         background: var(--danger-color);
         color: var(--white);
@@ -86,22 +94,49 @@
       }
 
       [data-theme="dark"] .toggle-slider {
-        background-color: var(--gray-600);
+        background-color: #ffeb3b; /* yellow for inactive in dark theme */
       }
 
       [data-theme="dark"] input[type="checkbox"]:checked + .toggle-slider {
         background-color: var(--primary-color);
+      }
+
+      [data-theme="dark"] .toggle-slider.checked {
+        background-color: #81c784; /* light green for active in dark theme */
       }
     </style>
   </head>
   <body class="options">
     <div class="options-container">
       <header class="options-header">
-        <div class="header-content">
-          <h1 class="options-title">RHAT</h1>
-          <p class="options-subtitle">
-            RaterHub Automated Tasks - Configure your monitoring preferences
-          </p>
+        <div
+          class="header-content"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+          "
+        >
+          <div>
+            <h1 class="options-title">RHAT</h1>
+            <p class="options-subtitle">
+              RaterHub Automated Tasks - Configure your monitoring preferences
+            </p>
+          </div>
+          <div
+            class="setting-group"
+            style="margin-left: auto; display: flex; align-items: center"
+          >
+            <label
+              id="testSwitchLabel"
+              class="toggle-label"
+              style="margin: 0; font-weight: 600; cursor: pointer"
+            >
+              Test Switch
+              <span id="testSwitchSlider" class="toggle-slider"></span>
+            </label>
+          </div>
         </div>
       </header>
 
@@ -562,21 +597,6 @@
 
       <footer class="options-footer">
         <div class="footer-content">
-          <div class="setting-group">
-            <h3>Test Button</h3>
-            <div class="setting-item">
-              <label class="toggle-label">
-                <input type="checkbox" id="showTestButton" />
-                <span class="toggle-slider"></span>
-                Show test button on main page
-              </label>
-              <p class="setting-description">
-                Enable to show a test button that simulates finding an acquire
-                button for testing purposes.
-              </p>
-            </div>
-          </div>
-
           <div class="setting-group">
             <h3>Reset to Defaults</h3>
             <button id="resetBtn" class="reset-btn">Reset All Settings</button>
