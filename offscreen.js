@@ -94,30 +94,13 @@ function stopAlarm() {
 }
 
 function fallbackNotification() {
-  // Create a notification as final fallback
-  chrome.notifications.create(
-    {
-      type: "basic",
-      iconUrl: chrome.runtime.getURL("icon.png"),
-      title: "RHAT - Tasks Available!",
-      message: "🎉 Tasks are available! Click to return to RaterHub.",
-      priority: 2,
-      requireInteraction: true,
-    },
-    (notificationId) => {
-      if (chrome.runtime.lastError) {
-        console.error(
-          "Offscreen: Notification error:",
-          chrome.runtime.lastError
-        );
-      } else {
-        console.log(
-          "Offscreen: Fallback notification created:",
-          notificationId
-        );
-      }
-    }
-  );
+  // Send message to background script to create notification
+  // (chrome.notifications is not available in offscreen documents)
+  chrome.runtime.sendMessage({
+    action: "createFallbackNotification",
+    title: "RHAT - Tasks Available!",
+    message: "🎉 Tasks are available! Click to return to RaterHub.",
+  });
 }
 
 // Handle page unload to clean up

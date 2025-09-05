@@ -275,7 +275,6 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   }
 });
 
-// Listen for messages from options page and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("Background received message:", message.action, message);
 
@@ -419,6 +418,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "checkAuthStatus") {
     console.log("Background: Received immediate auth status check");
     handleImmediateAuthStatusCheck(sendResponse);
+    return true;
+  }
+
+  // Handle fallback notification creation from offscreen document
+  if (message.action === "createFallbackNotification") {
+    console.log(
+      "Background: Received fallback notification request from offscreen"
+    );
+    createFallbackNotification();
     return true;
   }
 
@@ -752,6 +760,14 @@ async function playAlarmInBackground() {
         chrome.storage.local.get(["alertSoundData"], resolve);
       });
       settings.alertSoundData = localData.alertSoundData || "";
+    }
+
+    // Defensive check to ensure settings object is defined
+    if (!settings || typeof settings.alertSoundType === "undefined") {
+      settings = {
+        alertSoundType: "default",
+        alertSoundData: "",
+      };
     }
 
     console.log("Background: Sound settings:", {
@@ -1569,6 +1585,14 @@ async function handleTaskDetected(taskData) {
       result.id
     );
 
+    // Add to notification history
+    await addNotificationToHistory({
+      type: "task",
+      email: settings.notificationEmail,
+      status: "success",
+      taskData: taskData,
+    });
+
     // Update last notification time
     chrome.storage.sync.set({
       lastNotificationTime: new Date().toISOString(),
@@ -1601,6 +1625,15 @@ async function handleTaskDetected(taskData) {
         gmailAuthTimestamp: new Date().toISOString(),
       });
 
+      // Add failed notification to history
+      await addNotificationToHistory({
+        type: "task",
+        email: settings.notificationEmail,
+        status: "error",
+        errorMessage: errorDetails.userMessage,
+        taskData: taskData,
+      });
+
       // Broadcast the status change
       broadcastAuthStatusChange();
 
@@ -1612,6 +1645,15 @@ async function handleTaskDetected(taskData) {
         "Background: Non-authentication error in task notification:",
         error
       );
+
+      // Add failed notification to history
+      await addNotificationToHistory({
+        type: "task",
+        email: settings.notificationEmail,
+        status: "error",
+        errorMessage: error.message || "Unknown error",
+        taskData: taskData,
+      });
 
       // Create a general error notification
       chrome.notifications.create({
@@ -1710,6 +1752,14 @@ async function handleTestEmail(sendResponse) {
     const result = await GmailService.sendTestEmail(settings.notificationEmail);
 
     console.log("Background: Test email sent successfully:", result.id);
+
+    // Add successful test email to history
+    await addNotificationToHistory({
+      type: "test",
+      email: settings.notificationEmail,
+      status: "success",
+    });
+
     sendResponse({
       success: true,
       message: "Test email sent successfully",
@@ -1733,6 +1783,14 @@ async function handleTestEmail(sendResponse) {
       await handleAuthenticationError();
       errorResponse.message += " Please try authenticating again.";
     }
+
+    // Add failed test email to history
+    await addNotificationToHistory({
+      type: "test",
+      email: settings.notificationEmail,
+      status: "error",
+      errorMessage: errorResponse.message,
+    });
 
     sendResponse(errorResponse);
   }
@@ -1967,6 +2025,56 @@ async function handleImmediateAuthStatusCheck(sendResponse) {
       message: "Failed to check authentication status",
       error: error.message,
     });
+  }
+}
+
+// Notification history management functions
+const NOTIFICATION_HISTORY_KEY = "notificationHistory";
+const MAX_HISTORY_ENTRIES = 50;
+
+/**
+ * Add a notification entry to the history
+ * @param {Object} entry - The notification entry to add
+ * @param {string} entry.type - Type of notification ('task' or 'test')
+ * @param {string} entry.email - Email address the notification was sent to
+ * @param {string} entry.status - Status ('success' or 'error')
+ * @param {string} [entry.errorMessage] - Error message if status is 'error'
+ * @param {Object} [entry.taskData] - Task data for task notifications
+ */
+async function addNotificationToHistory(entry) {
+  try {
+    const history = await new Promise((resolve) => {
+      chrome.storage.local.get([NOTIFICATION_HISTORY_KEY], (data) => {
+        resolve(data[NOTIFICATION_HISTORY_KEY] || []);
+      });
+    });
+
+    // Add timestamp and ID to the entry
+    const historyEntry = {
+      ...entry,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+    };
+
+    // Add to the beginning of the array (most recent first)
+    history.unshift(historyEntry);
+
+    // Keep only the most recent entries
+    if (history.length > MAX_HISTORY_ENTRIES) {
+      history.splice(MAX_HISTORY_ENTRIES);
+    }
+
+    // Save back to storage
+    await new Promise((resolve) => {
+      chrome.storage.local.set(
+        { [NOTIFICATION_HISTORY_KEY]: history },
+        resolve
+      );
+    });
+
+    console.log("Background: Added notification to history:", historyEntry);
+  } catch (error) {
+    console.error("Background: Failed to add notification to history:", error);
   }
 }
 

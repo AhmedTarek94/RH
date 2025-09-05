@@ -8,12 +8,13 @@ A Chrome extension developed by **Ahmed Tarek** that automates task monitoring, 
 
 ## Version History
 
-### v2.1.1 - Gmail Authentication Fix
+### v2.2.0 - Bug Fixes and Stability Improvements
 
-- **OAuth Client ID**: Updated OAuth client ID for Gmail authentication
-- **Authentication Fix**: Resolved invalid client ID error causing authentication failures
-- **Bug Fix**: Fixed Gmail authentication flow to work properly
-- **Version Update**: Bumped version to 2.1.1 for release
+- **Audio Playback Fixes**: Resolved undefined property errors in offscreen audio playback
+- **Notification System**: Fixed fallback notification creation from offscreen documents
+- **Error Handling**: Added defensive checks to prevent runtime errors
+- **Stability Improvements**: Enhanced error resilience in audio and notification systems
+- **Code Optimization**: Improved message handling between background and offscreen scripts
 
 ### v2.1.0 - Project Cleanup and Optimization
 
