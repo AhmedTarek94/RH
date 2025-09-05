@@ -8,6 +8,13 @@ A Chrome extension developed by **Ahmed Tarek** that automates task monitoring, 
 
 ## Version History
 
+### v2.2.3 - Notification History Clear Button
+
+- **Clear History Button**: Added a clear button next to the refresh button in Recent Notifications
+- **History Management**: Users can now clear all notification history with one click
+- **UI Enhancement**: Improved button layout with flexbox for better alignment
+- **Storage Cleanup**: Properly clears notification history from local storage
+
 ### v2.2.2 - Test Switch Improvements
 
 - **Test Switch Positioning**: Moved test toggle to upper right corner of options page header

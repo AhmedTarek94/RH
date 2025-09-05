@@ -861,6 +861,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       loadNotificationHistory();
     });
 
+    const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+    clearHistoryBtn.addEventListener("click", () => {
+      clearNotificationHistory();
+    });
+
     // Load notification history initially
     loadNotificationHistory();
 
@@ -1297,6 +1302,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         versionElement.textContent = "Version: Unknown";
       }
     }
+  }
+
+  function clearNotificationHistory() {
+    chrome.storage.local.set({ notificationHistory: [] }, () => {
+      const notificationHistory = document.getElementById(
+        "notificationHistory"
+      );
+      if (notificationHistory) {
+        notificationHistory.innerHTML = `
+          <div class="history-item">
+            <div class="history-content">
+              <div class="history-title">No notifications sent yet</div>
+              <div class="history-meta">Configure Gmail notifications to see history</div>
+            </div>
+          </div>`;
+      }
+      showSaveStatus("Notification history cleared!", "success");
+    });
   }
 
   // Analytics functionality removed
