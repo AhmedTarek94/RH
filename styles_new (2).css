@@ -76,6 +76,48 @@
   --gray-900: #ffffff;
 }
 
+/* Dark theme adjustments for options page */
+[data-theme="dark"] .options {
+  background: linear-gradient(
+    135deg,
+    var(--bg-secondary) 0%,
+    var(--bg-primary) 100%
+  );
+}
+
+[data-theme="dark"] .options-header,
+[data-theme="dark"] .options-footer {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .tabs-container {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .tab-btn {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+[data-theme="dark"] .tab-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+}
+
+[data-theme="dark"] .tab-btn.active {
+  background: var(--bg-primary);
+  color: var(--primary-color);
+}
+
+[data-theme="dark"] .section-title,
+[data-theme="dark"] .section-description {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .save-message {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 /* Base Styles */
 * {
   box-sizing: border-box;
@@ -93,15 +135,29 @@ body {
 
 /* Popup Styles */
 .popup {
-  width: 320px;
-  background: var(--bg-primary);
+  width: 370px;
+  background: linear-gradient(
+    135deg,
+    var(--primary-color) 0%,
+    var(--primary-hover) 100%
+  );
   margin: 0;
   padding: 0;
   border: 1px solid var(--border-color);
+  color: var(--white);
 }
 
 .popup-container {
   padding: 16px;
+}
+
+/* Dark theme for popup */
+[data-theme="dark"] .popup {
+  background: linear-gradient(
+    135deg,
+    var(--bg-secondary) 0%,
+    var(--bg-primary) 100%
+  );
 }
 
 /* Popup-specific styles */
@@ -110,7 +166,9 @@ body {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   padding: 16px 12px;
-  margin-bottom: 16px;
+  margin-bottom: 40px;
+  width: 337.6px;
+  height: 95px;
 }
 
 .settings-card:last-child {

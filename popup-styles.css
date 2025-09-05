@@ -1,0 +1,476 @@
+/* Popup Styles - Matching Options Page Colors */
+
+/* Import CSS variables from options page */
+:root {
+  /* Base colors - matching options page */
+  --primary-color: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #e0e7ff;
+  --success-color: #10b981;
+  --success-light: #d1fae5;
+  --warning-color: #f59e0b;
+  --warning-light: #fef3c7;
+  --danger-color: #ef4444;
+  --danger-light: #fee2e2;
+
+  /* Light theme colors - matching options page */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-tertiary: #6b7280;
+  --border-color: #e5e7eb;
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+
+  /* Gray scale - matching options page */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  --white: #ffffff;
+
+  /* Layout - matching options page */
+  --border-radius: 8px;
+  --border-radius-lg: 12px;
+  --shadow-sm: 0 1px 2px 0 var(--shadow-color);
+  --shadow-md: 0 4px 6px -1px var(--shadow-color),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px var(--shadow-color),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Dark theme variables - matching options page */
+[data-theme="dark"] {
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #374151;
+  --text-primary: #f9fafb;
+  --text-secondary: #e5e7eb;
+  --text-tertiary: #9ca3af;
+  --border-color: #374151;
+  --card-bg: #1f2937;
+  --card-border: #374151;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+
+  /* Adjust gray scale for dark theme - matching options page */
+  --gray-50: #1f2937;
+  --gray-100: #374151;
+  --gray-200: #4b5563;
+  --gray-300: #6b7280;
+  --gray-400: #9ca3af;
+  --gray-500: #d1d5db;
+  --gray-600: #e5e7eb;
+  --gray-700: #f3f4f6;
+  --gray-800: #f9fafb;
+  --gray-900: #ffffff;
+}
+
+/* Base Styles - matching options page */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Popup Styles - matching options page design */
+.popup {
+  width: 320px;
+  background: var(--bg-primary);
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.popup-container {
+  padding: 16px;
+}
+
+/* Popup-specific styles - matching options page */
+.settings-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px 12px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settings-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1),
+    0 4px 8px -2px rgba(0, 0, 0, 0.06);
+}
+
+.settings-card:last-child {
+  margin-bottom: 0;
+}
+
+.spacer-sm {
+  height: 4px;
+}
+
+.spacer-md {
+  height: 12px;
+}
+
+.file-input-container,
+.url-input-container {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.file-input-label,
+.url-input-label {
+  margin-bottom: 8px;
+  text-align: center;
+  width: 100%;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.file-input-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.file-input {
+  margin-bottom: 6px;
+}
+
+.url-input {
+  width: 100%;
+}
+
+.sound-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.sound-icon {
+  font-size: 20px;
+}
+
+.error-message {
+  color: var(--danger-color);
+  font-size: 13px;
+  display: none;
+  margin-top: 6px;
+  text-align: center;
+  width: 100%;
+}
+
+.popup-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.title-icon {
+  font-size: 20px;
+}
+
+/* Status Section - matching options page */
+.status-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--gray-400);
+  transition: background-color 0.2s ease;
+}
+
+.status-dot.active {
+  background-color: var(--success-color);
+  box-shadow: 0 0 0 3px var(--success-light);
+}
+
+.status-dot.warning {
+  background-color: var(--warning-color);
+  box-shadow: 0 0 0 3px var(--warning-light);
+}
+
+.status-dot.error {
+  background-color: var(--danger-color);
+  box-shadow: 0 0 0 3px var(--danger-light);
+}
+
+/* Top Controls Section - matching options page */
+.top-controls-section {
+  display: flex;
+  gap: 30px; /* Increased spacing between buttons */
+  justify-content: center;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.top-control-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.top-control-group .control-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.top-control-group .toggle-switch {
+  margin: 0;
+}
+
+/* Controls Section - matching options page */
+.controls-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.control-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+/* Toggle Switch - matching options page */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle-switch.large {
+  width: 52px;
+  height: 28px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--gray-300);
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--white);
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+}
+
+.toggle-switch.large .slider:before {
+  height: 24px;
+  width: 24px;
+}
+
+input:checked + .slider {
+  background-color: var(--primary-color);
+}
+
+/* Custom styling for enable toggle switch - matching options page */
+#enabledToggle:not(:checked) + .slider {
+  background-color: #dc2626; /* Dark red for disabled state */
+}
+
+#enabledToggle:checked + .slider {
+  background-color: #10b981; /* Dark mint green for enabled state */
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.toggle-switch.large input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+/* Styled Select - matching options page */
+.styled-select {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease;
+  min-width: 120px;
+}
+
+.styled-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* Buttons - matching options page */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  outline: none;
+}
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-outline:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Actions Section - matching options page */
+.actions-section {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+/* Info Section - matching options page */
+.info-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 12px;
+}
+
+.info-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.info-text strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Dark theme for popup - matching options page */
+[data-theme="dark"] .popup {
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+[data-theme="dark"] .settings-card {
+  background: var(--card-bg);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-md);
+}
+
+[data-theme="dark"] .top-controls-section {
+  background: var(--card-bg);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .status-section {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+/* Focus Styles - matching options page */
+*:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}

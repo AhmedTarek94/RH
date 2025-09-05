@@ -1554,6 +1554,13 @@ async function handleTaskDetected(taskData) {
   try {
     console.log("Background: Handling task detection for Gmail notifications");
 
+    // Check for recent task notifications to prevent duplicates
+    const recentNotification = await checkForRecentTaskNotification();
+    if (recentNotification) {
+      console.log("Background: Recent task notification found, skipping duplicate");
+      return;
+    }
+
     // Get Gmail settings first
     const settings = await new Promise((resolve) => {
       chrome.storage.sync.get(
@@ -1584,6 +1591,9 @@ async function handleTaskDetected(taskData) {
       "Background: Task notification email sent successfully:",
       result.id
     );
+
+    // Record this notification to prevent duplicates
+    await recordTaskNotification();
 
     // Add to notification history
     await addNotificationToHistory({
@@ -2026,6 +2036,38 @@ async function handleImmediateAuthStatusCheck(sendResponse) {
       error: error.message,
     });
   }
+}
+
+// Helper functions to prevent duplicate task notifications
+const TASK_NOTIFICATION_COOLDOWN = 30000; // 30 seconds cooldown
+
+async function checkForRecentTaskNotification() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(["lastTaskNotificationTime"], (data) => {
+      if (data.lastTaskNotificationTime) {
+        const lastTime = new Date(data.lastTaskNotificationTime).getTime();
+        const now = Date.now();
+        const timeDiff = now - lastTime;
+
+        if (timeDiff < TASK_NOTIFICATION_COOLDOWN) {
+          console.log(`Background: Task notification sent ${timeDiff}ms ago, within cooldown period`);
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      } else {
+        resolve(false);
+      }
+    });
+  });
+}
+
+async function recordTaskNotification() {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({
+      lastTaskNotificationTime: new Date().toISOString()
+    }, resolve);
+  });
 }
 
 // Notification history management functions
