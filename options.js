@@ -1194,42 +1194,52 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (history.length === 0) {
           notificationHistory.innerHTML = `
-            <div class="history-item">
-              <div class="history-content">
-                <div class="history-title">No notifications sent yet</div>
-                <div class="history-meta">Configure Gmail notifications to see history</div>
-              </div>
-            </div>`;
+        <div class="history-item">
+          <div class="history-content">
+            <div class="history-title">No notifications sent yet</div>
+            <div class="history-meta">Configure Gmail notifications to see history</div>
+          </div>
+        </div>`;
           return;
         }
 
-        history
-          .slice()
-          .reverse()
-          .forEach((item) => {
-            const itemDiv = document.createElement("div");
-            itemDiv.className = "history-item";
+        // Create scrollable container with max height for 4 entries
+        const scrollContainer = document.createElement("div");
+        scrollContainer.style.maxHeight = "240px"; // Approx height for 4 entries
+        scrollContainer.style.overflowY = "auto";
+        scrollContainer.style.border = "1px solid var(--gray-300)";
+        scrollContainer.style.borderRadius = "6px";
+        scrollContainer.style.padding = "8px";
 
-            const contentDiv = document.createElement("div");
-            contentDiv.className = "history-content";
+        // Display most recent first (no reverse)
+        history.forEach((item) => {
+          const itemDiv = document.createElement("div");
+          itemDiv.className = "history-item";
 
-            const titleDiv = document.createElement("div");
-            titleDiv.className = "history-title";
-            titleDiv.textContent = `Sent to ${item.email} at ${new Date(
-              item.timestamp
-            ).toLocaleString()}`;
+          const contentDiv = document.createElement("div");
+          contentDiv.className = "history-content";
 
-            const metaDiv = document.createElement("div");
-            metaDiv.className = "history-meta";
-            metaDiv.textContent = `Status: ${item.status}${
-              item.errorMessage ? " - " + item.errorMessage : ""
-            }`;
+          const titleDiv = document.createElement("div");
+          titleDiv.className = "history-title";
+          const notificationType =
+            item.type === "test" ? "Test Email" : "Task Notification";
+          titleDiv.textContent = `${notificationType} sent to ${
+            item.email
+          } at ${new Date(item.timestamp).toLocaleString()}`;
 
-            contentDiv.appendChild(titleDiv);
-            contentDiv.appendChild(metaDiv);
-            itemDiv.appendChild(contentDiv);
-            notificationHistory.appendChild(itemDiv);
-          });
+          const metaDiv = document.createElement("div");
+          metaDiv.className = "history-meta";
+          metaDiv.textContent = `Status: ${item.status}${
+            item.errorMessage ? " - " + item.errorMessage : ""
+          }`;
+
+          contentDiv.appendChild(titleDiv);
+          contentDiv.appendChild(metaDiv);
+          itemDiv.appendChild(contentDiv);
+          scrollContainer.appendChild(itemDiv);
+        });
+
+        notificationHistory.appendChild(scrollContainer);
       });
     }
 

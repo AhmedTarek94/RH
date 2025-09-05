@@ -8,6 +8,13 @@ A Chrome extension developed by **Ahmed Tarek** that automates task monitoring, 
 
 ## Version History
 
+### v2.2.1 - UI Enhancements
+
+- **Scrollable Notifications**: Added scrollable container for Recent Notifications history showing 4 entries at a time
+- **Improved User Experience**: Better space management in options page with scrollable notification history
+- **Visual Enhancements**: Added subtle border and padding to notification history container
+- **Responsive Design**: Maintained consistent theming with CSS variables for the scrollable container
+
 ### v2.2.0 - Bug Fixes and Stability Improvements
 
 - **Audio Playback Fixes**: Resolved undefined property errors in offscreen audio playback
