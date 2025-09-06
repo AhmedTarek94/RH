@@ -8,6 +8,13 @@ A Chrome extension developed by **Ahmed Tarek** that automates task monitoring, 
 
 ## Version History
 
+### v2.2.4 - Offscreen Audio Fix
+
+- **Audio System Fix**: Resolved offscreen audio playback error by preventing message conflicts between content and background scripts
+- **Manifest V3 Compatibility**: Improved audio system reliability in Manifest V3 environment
+- **Error Prevention**: Added defensive checks to prevent duplicate audio playback
+- **Code Optimization**: Enhanced message handling between extension components
+
 ### v2.2.3 - Notification History Clear Button
 
 - **Clear History Button**: Added a clear button next to the refresh button in Recent Notifications
