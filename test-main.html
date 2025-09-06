@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RHAT Test - Main Page</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 8px;
+      }
+      .status {
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+        text-align: center;
+        font-weight: bold;
+      }
+      .status.waiting {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+      }
+      .status.available {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .acquire-section {
+        text-align: center;
+        margin: 30px 0;
+      }
+      .acquire-button {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 18px;
+        font-weight: bold;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+      }
+      .acquire-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+      }
+      .acquire-button:active {
+        transform: translateY(0);
+      }
+      .info {
+        background: #e7f3ff;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+        border-left: 4px solid #007bff;
+      }
+      .refresh-info {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+        font-size: 14px;
+        color: #666;
+      }
+      .test-controls {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      .test-controls button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        margin: 0 5px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .test-controls button:hover {
+        background: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🔔 RHAT Test - Main Page</h1>
+        <p>Testing Task Detection Workflow</p>
+      </div>
+
+      <div class="info">
+        <strong>Test Page Information:</strong><br />
+        This page simulates the RaterHub main page. The "Acquire if available"
+        button appears randomly.<br />
+        When clicked, it navigates to a test task page to verify the extension's
+        task detection workflow.
+      </div>
+
+      <div class="test-controls">
+        <strong>Test Controls:</strong>
+        <button onclick="forceShowButton()">Force Show Button</button>
+        <button onclick="forceHideButton()">Force Hide Button</button>
+        <button onclick="checkStatus()">Check Status</button>
+        <button onclick="resetTest()">Reset Test</button>
+      </div>
+
+      <div id="status" class="status waiting">
+        🔄 Waiting for tasks to become available...
+      </div>
+
+      <div id="acquireSection" class="acquire-section" style="display: none">
+        <h2>🎉 Tasks Available!</h2>
+        <button
+          id="acquireButton"
+          class="acquire-button"
+          onclick="acquireTask()"
+          style="text-decoration: none; display: inline-block"
+        >
+          Acquire if available
+        </button>
+        <div class="refresh-info">
+          Button will navigate to test task page when clicked
+        </div>
+      </div>
+
+      <div class="info">
+        <strong>Extension Status:</strong><br />
+        Make sure RHAT extension is enabled and monitoring is active.<br />
+        The extension should detect the button and handle the workflow
+        automatically.
+      </div>
+    </div>
+
+    <script>
+      let buttonVisible = false;
+      let lastCheck = 0;
+      const CHECK_INTERVAL = 3000; // Check every 3 seconds
+      const SHOW_PROBABILITY = 0.3; // 30% chance to show button
+
+      function initializeTest() {
+        console.log("RHAT Test: Initializing test page");
+        startRandomChecks();
+        updateStatus();
+      }
+
+      function startRandomChecks() {
+        setInterval(() => {
+          const now = Date.now();
+          if (now - lastCheck >= CHECK_INTERVAL) {
+            lastCheck = now;
+            randomButtonCheck();
+          }
+        }, 1000);
+      }
+
+      function randomButtonCheck() {
+        // Random chance to show/hide button
+        const shouldShow = Math.random() < SHOW_PROBABILITY;
+
+        if (shouldShow && !buttonVisible) {
+          showAcquireButton();
+        } else if (!shouldShow && buttonVisible) {
+          hideAcquireButton();
+        }
+      }
+
+      function showAcquireButton() {
+        buttonVisible = true;
+        document.getElementById("acquireSection").style.display = "block";
+        document.getElementById("status").className = "status available";
+        document.getElementById("status").innerHTML =
+          "✅ Tasks are available! Acquire button is visible.";
+        console.log("RHAT Test: Acquire button shown");
+
+        // Auto-hide after 10 seconds if not clicked
+        setTimeout(() => {
+          if (buttonVisible) {
+            hideAcquireButton();
+          }
+        }, 10000);
+      }
+
+      function hideAcquireButton() {
+        buttonVisible = false;
+        document.getElementById("acquireSection").style.display = "none";
+        document.getElementById("status").className = "status waiting";
+        document.getElementById("status").innerHTML =
+          "🔄 Waiting for tasks to become available...";
+        console.log("RHAT Test: Acquire button hidden");
+      }
+
+      function acquireTask() {
+        console.log("RHAT Test: Acquire button clicked");
+        document.getElementById("status").innerHTML =
+          "🚀 Navigating to task page...";
+        document.getElementById("status").className = "status available";
+
+        // Navigate to test task page
+        setTimeout(() => {
+          window.location.href = "test-task.html";
+        }, 500);
+      }
+
+      function forceShowButton() {
+        console.log("RHAT Test: Force showing button");
+        showAcquireButton();
+      }
+
+      function forceHideButton() {
+        console.log("RHAT Test: Force hiding button");
+        hideAcquireButton();
+      }
+
+      function checkStatus() {
+        const status = buttonVisible ? "Button is visible" : "Button is hidden";
+        alert(
+          `Current Status: ${status}\n\nCheck browser console for detailed logs.`
+        );
+      }
+
+      function resetTest() {
+        console.log("RHAT Test: Resetting test");
+        hideAcquireButton();
+        lastCheck = 0;
+        document.getElementById("status").innerHTML =
+          "🔄 Test reset. Waiting for tasks...";
+        document.getElementById("status").className = "status waiting";
+      }
+
+      function updateStatus() {
+        // Initial status update
+        document.getElementById("status").innerHTML =
+          "🔄 Initializing test page...";
+        setTimeout(() => {
+          document.getElementById("status").innerHTML =
+            "🔄 Waiting for tasks to become available...";
+        }, 1000);
+      }
+
+      // Initialize when page loads
+      window.addEventListener("load", initializeTest);
+
+      // Log page load
+      console.log("RHAT Test: Main page loaded");
+    </script>
+  </body>
+</html>

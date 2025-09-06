@@ -8,14 +8,42 @@ let currentAudioUrl = null;
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("Offscreen: Received message:", message.action);
+  console.log("Offscreen: Received message:", message);
+  console.log("Offscreen: Message action:", message.action);
+  console.log("Offscreen: Message settings:", message.settings);
 
   if (message.action === "playAlarm") {
-    playAlarm(message.settings);
-    sendResponse({ success: true });
+    // Only process messages with settings (from background script)
+    if (!message.settings) {
+      console.log(
+        "Offscreen: Ignoring playAlarm without settings (likely from content script)"
+      );
+      return true;
+    }
+
+    // Handle playAlarm asynchronously
+    playAlarm(message.settings)
+      .then(() => {
+        console.log("Offscreen: playAlarm completed successfully");
+        sendResponse({ success: true });
+      })
+      .catch((error) => {
+        console.error("Offscreen: playAlarm failed:", error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Keep message channel open for async response
   } else if (message.action === "stopAlarm") {
-    stopAlarm();
-    sendResponse({ success: true });
+    try {
+      stopAlarm();
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error("Offscreen: stopAlarm failed:", error);
+      sendResponse({ success: false, error: error.message });
+    }
+  } else {
+    // Unknown action
+    console.log("Offscreen: Unknown action received:", message.action);
+    sendResponse({ success: false, error: "Unknown action" });
   }
 
   return true; // Keep message channel open for async response
@@ -24,6 +52,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function playAlarm(settings) {
   try {
     console.log("Offscreen: Playing alarm with settings:", settings);
+
+    // Validate settings object
+    if (!settings || typeof settings !== "object") {
+      console.error("Offscreen: Invalid settings object received:", settings);
+      settings = {
+        alertSoundType: "default",
+        alertSoundData: "",
+      };
+    }
 
     // Stop any existing audio first
     stopAlarm();
