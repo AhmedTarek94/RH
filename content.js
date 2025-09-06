@@ -154,6 +154,11 @@ if (window.raterHubMonitorLoaded) {
     const mainUrl = "https://www.raterhub.com/evaluation/rater";
     const indexUrl = "https://www.raterhub.com/evaluation/rater/task/index";
 
+    // Check if this is a test page (for development/testing)
+    const isTestPage =
+      currentUrl.includes("test-main.html") ||
+      currentUrl.includes("test-task.html");
+
     // Only perform redirects if the extension is enabled
     if (!currentSettings.enabled) {
       console.log(
@@ -205,6 +210,17 @@ if (window.raterHubMonitorLoaded) {
       return;
     }
 
+    // Check for test task page
+    if (currentUrl.includes("test-task.html")) {
+      console.log(
+        "RaterHub Monitor: On test task page, stopping monitoring and checking for pending alarm"
+      );
+      stopMonitoring();
+      // Check for pending alarm from main page navigation
+      checkForPendingAlarm();
+      return;
+    }
+
     // Check for index page or other forbidden pages
     if (currentSettings.enableErrorDetection) {
       if (
@@ -220,17 +236,19 @@ if (window.raterHubMonitorLoaded) {
       }
     }
 
-    // If not on the main page and not handled above, stop monitoring
-    if (currentUrl !== mainUrl) {
-      console.log("RaterHub Monitor: Not on main page, stopping monitoring");
+    // If not on the main page and not a test page, stop monitoring
+    if (currentUrl !== mainUrl && !isTestPage) {
+      console.log(
+        "RaterHub Monitor: Not on main page or test page, stopping monitoring"
+      );
       stopMonitoring();
       return;
     }
 
-    // On main page, ensure monitoring is active if enabled
+    // On main page or test page, ensure monitoring is active if enabled
     if (currentSettings.enabled && !isMonitoring) {
       console.log(
-        "RaterHub Monitor: On main page and enabled, starting monitoring"
+        "RaterHub Monitor: On main page/test page and enabled, starting monitoring"
       );
       startMonitoring();
     }
@@ -384,104 +402,109 @@ if (window.raterHubMonitorLoaded) {
         acquireButton.href || "No href"
       );
 
-      // Send task detection notification to background script for Gmail notifications
-      const taskData = {
-        timestamp: new Date().toISOString(),
-        url: window.location.href,
-        buttonText:
-          acquireButton.textContent ||
-          acquireButton.value ||
-          "Acquire if available",
-        buttonHref: acquireButton.href || "No href",
-        mode: currentSettings.mode,
-      };
-
-      console.log(
-        "RaterHub Monitor: Sending task detection notification to background"
-      );
-      chrome.runtime.sendMessage(
-        {
-          action: "taskDetected",
-          taskData: taskData,
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            console.error(
-              "RaterHub Monitor: Error sending task detection message:",
-              chrome.runtime.lastError
-            );
-          } else {
-            console.log(
-              "RaterHub Monitor: Task detection notification sent successfully"
-            );
-          }
-        }
-      );
-
-      console.log("RaterHub Monitor: Stopping monitoring and playing alarm...");
+      console.log("RaterHub Monitor: Stopping monitoring...");
       stopMonitoring(); // Stop monitoring immediately
 
-      // Play alarm immediately when task is detected
-      console.log(
-        "RaterHub Monitor: Playing alarm immediately on task detection"
-      );
-      playAlarm();
-
       if (currentSettings.mode === "alarm_and_click") {
-        // Set flag to continue alarm after page navigation
+        // Set flags for alarm and Gmail notification after page navigation
         sessionStorage.setItem("raterhub_continue_alarm", "true");
         sessionStorage.setItem(
           "raterhub_alarm_timestamp",
           Date.now().toString()
         );
-
-        console.log(
-          "RaterHub Monitor: Auto-clicking acquire button after alarm starts"
+        sessionStorage.setItem("raterhub_send_gmail", "true");
+        sessionStorage.setItem(
+          "raterhub_task_data",
+          JSON.stringify({
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            buttonText:
+              acquireButton.textContent ||
+              acquireButton.value ||
+              "Acquire if available",
+            buttonHref: acquireButton.href || "No href",
+            mode: currentSettings.mode,
+          })
         );
 
-        // Small delay to ensure button is fully ready and alarm has started
-        setTimeout(() => {
-          try {
-            // Try standard click first
-            acquireButton.click();
-            console.log("RaterHub Monitor: Button click executed successfully");
-          } catch (error) {
-            console.error("RaterHub Monitor: Error clicking button:", error);
+        console.log(
+          "RaterHub Monitor: Auto-clicking acquire button immediately"
+        );
 
-            // Try alternative click methods
-            try {
-              if (acquireButton.tagName === "A") {
-                // For links, try to navigate directly
-                console.log(
-                  "RaterHub Monitor: Trying direct navigation for link"
-                );
-                window.location.href = acquireButton.href;
-              } else {
-                // For buttons, try dispatching a click event
-                console.log("RaterHub Monitor: Trying dispatched click event");
-                const clickEvent = new MouseEvent("click", {
-                  view: window,
-                  bubbles: true,
-                  cancelable: true,
-                });
-                acquireButton.dispatchEvent(clickEvent);
-              }
+        // Try to click the acquire button first (which navigates the page)
+        try {
+          acquireButton.click();
+          console.log("RaterHub Monitor: Button click executed successfully");
+        } catch (error) {
+          console.error("RaterHub Monitor: Error clicking button:", error);
+
+          // Try alternative click methods
+          try {
+            if (acquireButton.tagName === "A") {
+              // For links, try to navigate directly
               console.log(
-                "RaterHub Monitor: Alternative click method executed"
+                "RaterHub Monitor: Trying direct navigation for link"
               );
-            } catch (altError) {
+              window.location.href = acquireButton.href;
+            } else {
+              // For buttons, try dispatching a click event
+              console.log("RaterHub Monitor: Trying dispatched click event");
+              const clickEvent = new MouseEvent("click", {
+                view: window,
+                bubbles: true,
+                cancelable: true,
+              });
+              acquireButton.dispatchEvent(clickEvent);
+            }
+            console.log("RaterHub Monitor: Alternative click method executed");
+          } catch (altError) {
+            console.error(
+              "RaterHub Monitor: Alternative click method also failed:",
+              altError
+            );
+          }
+        }
+      } else {
+        // Alarm only mode - send Gmail and play alarm immediately
+        console.log(
+          "RaterHub Monitor: Alarm only mode - sending Gmail and playing alarm"
+        );
+
+        // Send task detection notification to background script for Gmail notifications
+        const taskData = {
+          timestamp: new Date().toISOString(),
+          url: window.location.href,
+          buttonText:
+            acquireButton.textContent ||
+            acquireButton.value ||
+            "Acquire if available",
+          buttonHref: acquireButton.href || "No href",
+          mode: currentSettings.mode,
+        };
+
+        console.log(
+          "RaterHub Monitor: Sending task detection notification to background"
+        );
+        chrome.runtime.sendMessage(
+          {
+            action: "taskDetected",
+            taskData: taskData,
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
               console.error(
-                "RaterHub Monitor: Alternative click method also failed:",
-                altError
+                "RaterHub Monitor: Error sending task detection message:",
+                chrome.runtime.lastError.message || chrome.runtime.lastError
+              );
+            } else {
+              console.log(
+                "RaterHub Monitor: Task detection notification sent successfully"
               );
             }
           }
-        }, 200); // 200ms delay to ensure alarm has started
-      } else {
-        // Alarm only mode - alarm already played above
-        console.log(
-          "RaterHub Monitor: Alarm only mode - alarm played, no auto-click"
         );
+
+        playAlarm();
       }
     } else if (!noTasksExists && !acquireButton) {
       // Page might be in a different state - don't refresh, just wait for next interval
@@ -814,7 +837,7 @@ if (window.raterHubMonitorLoaded) {
         if (chrome.runtime.lastError) {
           console.error(
             "RaterHub Monitor: Error sending playAlarm message:",
-            chrome.runtime.lastError
+            chrome.runtime.lastError.message || chrome.runtime.lastError
           );
           // Fallback to direct audio playing if background fails
           playAlarmDirectly();
@@ -892,7 +915,7 @@ if (window.raterHubMonitorLoaded) {
         if (chrome.runtime.lastError) {
           console.error(
             "RaterHub Monitor: Error sending stopAlarm message:",
-            chrome.runtime.lastError
+            chrome.runtime.lastError.message || chrome.runtime.lastError
           );
           // Fallback to direct stop if background fails
           stopAlarmDirectly();
@@ -950,6 +973,46 @@ if (window.raterHubMonitorLoaded) {
         sessionStorage.removeItem("raterhub_continue_alarm");
         sessionStorage.removeItem("raterhub_alarm_timestamp");
       }
+    }
+
+    // Check if we need to send Gmail notification after page navigation
+    const sendGmail = sessionStorage.getItem("raterhub_send_gmail");
+    const taskDataStr = sessionStorage.getItem("raterhub_task_data");
+
+    if (sendGmail && taskDataStr) {
+      console.log(
+        "RaterHub Monitor: Sending Gmail notification after page navigation"
+      );
+      try {
+        const taskData = JSON.parse(taskDataStr);
+        chrome.runtime.sendMessage(
+          {
+            action: "taskDetected",
+            taskData: taskData,
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              console.error(
+                "RaterHub Monitor: Error sending Gmail message:",
+                chrome.runtime.lastError.message || chrome.runtime.lastError
+              );
+            } else {
+              console.log(
+                "RaterHub Monitor: Gmail notification sent successfully after page navigation"
+              );
+            }
+          }
+        );
+      } catch (error) {
+        console.error(
+          "RaterHub Monitor: Error parsing task data for Gmail:",
+          error
+        );
+      }
+
+      // Clean up flags
+      sessionStorage.removeItem("raterhub_send_gmail");
+      sessionStorage.removeItem("raterhub_task_data");
     }
   }
 
@@ -1271,24 +1334,73 @@ if (window.raterHubMonitorLoaded) {
     }
 
     console.log(
-      "RaterHub Monitor: Simulating acquire button found - stopping monitoring and playing alarm"
+      "RaterHub Monitor: Simulating acquire button found - stopping monitoring"
     );
 
     // Stop monitoring immediately (simulating task found)
     stopMonitoring();
 
     if (currentSettings.mode === "alarm_and_click") {
-      // Simulate auto-click behavior first, then play alarm
-      console.log(
-        "RaterHub Monitor: Test mode is 'alarm_and_click' - simulating auto-click behavior first"
+      // Set flags for alarm and Gmail notification after page navigation
+      sessionStorage.setItem("raterhub_continue_alarm", "true");
+      sessionStorage.setItem("raterhub_alarm_timestamp", Date.now().toString());
+      sessionStorage.setItem("raterhub_send_gmail", "true");
+      sessionStorage.setItem(
+        "raterhub_task_data",
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          url: window.location.href,
+          buttonText: "Acquire if available",
+          buttonHref: "test-href",
+          mode: currentSettings.mode,
+        })
       );
 
-      // Play alarm after simulating the click behavior
+      console.log(
+        "RaterHub Monitor: Test mode is 'alarm_and_click' - simulating auto-click and setting flags"
+      );
+
+      // Simulate page navigation by calling checkForPendingAlarm
       setTimeout(() => {
-        playAlarm();
-      }, 100); // Small delay to simulate the new behavior
+        checkForPendingAlarm();
+      }, 100); // Small delay to simulate page load
     } else {
-      // Alarm only mode - just play alarm
+      // Alarm only mode - send Gmail and play alarm immediately
+      console.log(
+        "RaterHub Monitor: Test mode is 'alarm_only' - sending Gmail and playing alarm"
+      );
+
+      // Send task detection notification to background script for Gmail notifications
+      const taskData = {
+        timestamp: new Date().toISOString(),
+        url: window.location.href,
+        buttonText: "Acquire if available",
+        buttonHref: "test-href",
+        mode: currentSettings.mode,
+      };
+
+      console.log(
+        "RaterHub Monitor: Sending test task detection notification to background"
+      );
+      chrome.runtime.sendMessage(
+        {
+          action: "taskDetected",
+          taskData: taskData,
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              "RaterHub Monitor: Error sending test Gmail message:",
+              chrome.runtime.lastError.message || chrome.runtime.lastError
+            );
+          } else {
+            console.log(
+              "RaterHub Monitor: Test Gmail notification sent successfully"
+            );
+          }
+        }
+      );
+
       playAlarm();
     }
 

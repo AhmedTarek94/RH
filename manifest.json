@@ -39,7 +39,9 @@
     {
       "matches": [
         "https://www.raterhub.com/evaluation/rater",
-        "https://www.raterhub.com/evaluation/rater/task/index/*"
+        "https://www.raterhub.com/evaluation/rater/task/index/*",
+        "file://*/*test-main.html",
+        "file://*/*test-task.html"
       ],
       "js": ["content.js"]
     }

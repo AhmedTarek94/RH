@@ -779,28 +779,63 @@ async function playAlarmInBackground() {
     await createOffscreenDocument();
 
     // Send message to offscreen document to play alarm
-    chrome.runtime.sendMessage(
-      {
+    try {
+      // First check if offscreen document exists
+      const contexts = await chrome.runtime.getContexts({
+        contextTypes: ["OFFSCREEN_DOCUMENT"],
+      });
+
+      if (contexts.length === 0) {
+        console.log("Background: No offscreen document found, creating one");
+        await createOffscreenDocument();
+        // Wait a bit for the document to load
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } else {
+        // Even if offscreen document exists, give it a moment to be ready
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      const messageData = {
         action: "playAlarm",
-        settings: {
+        settings: settings && typeof settings === "object" ? {
           alertSoundType: settings.alertSoundType || "default",
           alertSoundData: settings.alertSoundData || "",
+        } : {
+          alertSoundType: "default",
+          alertSoundData: "",
         },
-      },
-      (response) => {
+      };
+
+      console.log("Background: Settings object:", settings);
+      console.log("Background: Sending message to offscreen:", messageData);
+      console.log(
+        "Background: Message settings type:",
+        typeof messageData.settings
+      );
+      console.log("Background: Message settings value:", messageData.settings);
+
+      chrome.runtime.sendMessage(messageData, (response) => {
         if (chrome.runtime.lastError) {
           console.error(
             "Background: Error sending playAlarm to offscreen:",
             chrome.runtime.lastError
           );
           createFallbackNotification();
+        } else if (response) {
+          console.log(
+            "Background: Alarm playback request sent to offscreen document successfully",
+            response
+          );
         } else {
           console.log(
-            "Background: Alarm playback request sent to offscreen document"
+            "Background: Alarm playback request sent to offscreen document (no response)"
           );
         }
-      }
-    );
+      });
+    } catch (error) {
+      console.error("Background: Failed to send message to offscreen:", error);
+      createFallbackNotification();
+    }
   } catch (error) {
     console.error("Background: Error in playAlarmInBackground:", error);
     createFallbackNotification();
@@ -1557,7 +1592,9 @@ async function handleTaskDetected(taskData) {
     // Check for recent task notifications to prevent duplicates
     const recentNotification = await checkForRecentTaskNotification();
     if (recentNotification) {
-      console.log("Background: Recent task notification found, skipping duplicate");
+      console.log(
+        "Background: Recent task notification found, skipping duplicate"
+      );
       return;
     }
 
@@ -2050,7 +2087,9 @@ async function checkForRecentTaskNotification() {
         const timeDiff = now - lastTime;
 
         if (timeDiff < TASK_NOTIFICATION_COOLDOWN) {
-          console.log(`Background: Task notification sent ${timeDiff}ms ago, within cooldown period`);
+          console.log(
+            `Background: Task notification sent ${timeDiff}ms ago, within cooldown period`
+          );
           resolve(true);
         } else {
           resolve(false);
@@ -2064,9 +2103,12 @@ async function checkForRecentTaskNotification() {
 
 async function recordTaskNotification() {
   return new Promise((resolve) => {
-    chrome.storage.local.set({
-      lastTaskNotificationTime: new Date().toISOString()
-    }, resolve);
+    chrome.storage.local.set(
+      {
+        lastTaskNotificationTime: new Date().toISOString(),
+      },
+      resolve
+    );
   });
 }
 
